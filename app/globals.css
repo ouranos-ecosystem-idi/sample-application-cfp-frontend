@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #fafafa;
+}
+
+* {
+  font-size: 14px;
+  color: #555555;
+}
+
+html {
+  /* rootのサイズ(remの基準)を設定 */
+  font-size: 16px;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
