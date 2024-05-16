@@ -168,7 +168,16 @@ npx openapi-typescript api/schemas/tr_openapi_b.yaml --output api/schemas/tracea
 
 [SonarQube の 現時点の LTS 版 v9.9.2](https://www.sonarsource.com/products/sonarqube/downloads/lts/9-9-lts/) の Sonar way ルールを適用している。
 
+## 問合せ及び要望に関して
+
+- 本リポジトリは現状は主に配布目的の運用となるため、IssueやPull Requestに関しては受け付けておりません。
+
 ## ライセンス
 
 - 本リポジトリはMITライセンスで提供されています。
 - ソースコードおよび関連ドキュメントの著作権は株式会社NTTデータグループに帰属します。
+
+## 免責事項
+
+- 本リポジトリの内容は予告なく変更・削除する可能性があります。
+- 本リポジトリの利用により生じた損失及び損害等について、いかなる責任も負わないものとします。
