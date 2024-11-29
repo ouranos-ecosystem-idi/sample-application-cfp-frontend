@@ -379,4 +379,9 @@ export const repository = {
 
     return new Blob([decodedContent]);
   },
+
+  // 部品構成情報を削除する
+  async deletePartsStructure(traceId: string) {
+    await dataTransportApiClient.deleteParts(traceId);
+  },
 };

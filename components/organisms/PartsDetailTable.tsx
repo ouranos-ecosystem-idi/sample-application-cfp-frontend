@@ -1,21 +1,26 @@
 'use client';
-import InputTextBox from '@/components/atoms/InputTextBox';
+import { getOperatorId } from '@/api/accessToken';
 import AddRowButton from '@/components/atoms/AddRowButton';
-import { MinusCircle, ArrowCounterClockwise } from '@phosphor-icons/react';
-import CheckBox from '@/components/atoms/CheckBox';
-import SectionHeader from '@/components/molecules/SectionHeader';
-import PopupModal from '@/components/molecules/PopupModal';
 import { Button } from '@/components/atoms/Button';
-import { Column, DataTable } from '@/components/molecules/DataTable';
+import CheckBox from '@/components/atoms/CheckBox';
+import DisplayHyphen from '@/components/atoms/DisplayHyphen';
+import InputTextBox from '@/components/atoms/InputTextBox';
 import LevelIcon from '@/components/atoms/LevelIcon';
+import RefreshButton from '@/components/atoms/RefreshButton';
+import { Select } from '@/components/atoms/Select';
+import { Column, DataTable } from '@/components/molecules/DataTable';
+import PopupModal from '@/components/molecules/PopupModal';
+import SectionHeader from '@/components/molecules/SectionHeader';
+import { PlantCell } from '@/components/organisms/PlantCell';
+import { MAX_CHILD_PARTS_NUM } from '@/lib/constants';
+import { convertPartsFormTypeToPartsStructure } from '@/lib/converters';
 import {
-  Plant,
   AmountRequiredUnitsList,
   PartLevel,
   PartsFormRowType,
   PartsStructure,
+  Plant,
 } from '@/lib/types';
-import DisplayHyphen from '@/components/atoms/DisplayHyphen';
 import {
   getFormikErrorMessage,
   isDecimalPartDigitsWithin,
@@ -23,16 +28,11 @@ import {
   isIntegerPartDigitsWithin,
   validatePartsDuplication,
 } from '@/lib/utils';
-import { useMemo, useEffect, useState, Dispatch, SetStateAction } from 'react';
-import { FormikProvider, useFormik } from 'formik';
-import { MAX_CHILD_PARTS_NUM } from '@/lib/constants';
-import { Select } from '@/components/atoms/Select';
-import { PlantCell } from '@/components/organisms/PlantCell';
-import RefreshButton from '@/components/atoms/RefreshButton';
-import * as Yup from 'yup';
 import '@/lib/yup.locale';
-import { convertPartsFormTypeToPartsStructure } from '@/lib/converters';
-import { getOperatorId } from '@/api/accessToken';
+import { ArrowCounterClockwise, MinusCircle } from '@phosphor-icons/react';
+import { FormikProvider, useFormik } from 'formik';
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
+import * as Yup from 'yup';
 
 type FormRowType = PartsFormRowType & {
   rowID: number;
@@ -55,6 +55,11 @@ function convertFormTypeToPartsStructure(form: FormType) {
     },
     getOperatorId()
   );
+}
+
+function isChildrenParts(partsStructure: PartsStructure | undefined) {
+  return partsStructure === undefined ?
+    true : partsStructure.childrenParts.length !== 0;
 }
 
 function isParentTerminated(tableData: FormRowType[]): boolean {
@@ -116,6 +121,7 @@ export default function PartsDetail({
   partsStructure,
   plants,
   onSubmit,
+  onDeleteSubmit,
   isPartsLoading,
   setErrorMessage,
   setIsErrorDisplayOpen,
@@ -123,11 +129,13 @@ export default function PartsDetail({
   partsStructure?: PartsStructure;
   plants: Plant[];
   onSubmit: (value: PartsStructure) => Promise<void>;
+  onDeleteSubmit: (value: string) => void;
   isPartsLoading: boolean;
   setErrorMessage: Dispatch<SetStateAction<string>>;
   setIsErrorDisplayOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   const onClickConfirm = () => {
     const duplicateError = validatePartsDuplication(
@@ -141,6 +149,12 @@ export default function PartsDetail({
     }
     setIsConfirmModalOpen(true);
   };
+
+  // 削除ボタンが押されたときの処理
+  const handleDeleteClick = useCallback((traceId: string) => {
+    onDeleteSubmit(traceId);
+    setIsDeleteModalOpen(false);
+  }, [onDeleteSubmit]);
 
   const formik = useFormik<FormType>({
     onSubmit: (form: FormType) => {
@@ -408,11 +422,20 @@ export default function PartsDetail({
               <Button
                 key='confirm'
                 type='button'
-                onClick={onClickConfirm}
-                disabled={!(formik.isValid && formik.dirty)}
+                color='error'
+                onClick={() => { setIsDeleteModalOpen(true); }}
+                disabled={isChildrenParts(partsStructure)}
               >
-                確定
+                削除
               </Button>,
+              <Button
+              key='confirm'
+              type='button'
+              onClick={onClickConfirm}
+              disabled={!(formik.isValid && formik.dirty)}
+            >
+              確定
+            </Button>,
             ]}
             className='mb-4'
           />
@@ -455,6 +478,36 @@ export default function PartsDetail({
           />
           <div className='pt-5' />
         </div>
+        <PopupModal
+          button={
+            <Button
+              color='error'
+              variant='solid'
+              size='default'
+              key='submit'
+              type='submit'
+              disabled={isChildrenParts(partsStructure)}
+              onClick={() => handleDeleteClick(formik.values.data[0].traceId!)}
+            >
+              削除
+            </Button>
+          }
+          isOpen={isDeleteModalOpen}
+          setIsOpen={setIsDeleteModalOpen}
+          title='部品構成情報を削除しますか？'
+        >
+          <div className='mb-2.5'>
+            <div className='text-base'>
+              {!isEmpty(formik.values.data[0]) &&
+                <>
+                  <div>部品項目：{formik.values.data[0].partsName}</div>
+                  <div>補助項目：{formik.values.data[0].supportPartsName}</div>
+                  <div>トレース識別子：{formik.values.data[0].traceId}</div>
+                </>
+              }
+            </div>
+          </div>
+        </PopupModal>
         <PopupModal
           button={
             <Button

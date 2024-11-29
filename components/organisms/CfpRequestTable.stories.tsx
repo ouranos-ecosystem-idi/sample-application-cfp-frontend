@@ -68,10 +68,15 @@ const tradeRequestData: TradeRequestDataTypeWithOperator[] = [
     tradeStatus: {
       requestStatus: {
         cfpResponseStatus: 'COMPLETED',
-        tradeTreeStatus: 'TERMINATED'
+        tradeTreeStatus: 'TERMINATED',
+        completedCount: 2,
+        completedCountModifiedAt:'2024-05-07T18:59:33Z',
+        tradesCount: 3,
+        tradesCountModifiedAt:'2024-05-06T11:43:51Z',
       },
       message:
         '電池モジュールA01-01のCFP登録をお願いします。メッセージは100文字まで入力することができます。電池モジュールA01-01のCFP登録をお願いします。メッセージは100文字まで入力することができます。電池モジュールA01-01のCFP登録をお',
+      responseDueDate:'2024-06-01',
     },
     operator: {
       operatorId: 'yyy',
@@ -166,7 +171,7 @@ export const Primary: Story = {
     },
     onCancelTradeRequest: async (
     ) => { },
-    isOperaterLoading: false,
+    isOperatorLoading: false,
     isTradeResponseLoading: false,
   },
 };

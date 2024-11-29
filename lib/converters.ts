@@ -138,10 +138,18 @@ export function convertStatusModelToTradeStatus(
   status: StatusModel
 ): TradeStatus {
   return {
-    requestStatus: status.requestStatus,
+    requestStatus: {
+      cfpResponseStatus: status.requestStatus.cfpResponseStatus,
+      tradeTreeStatus: status.requestStatus.tradeTreeStatus,
+      completedCount: status.requestStatus.completedCount ?? undefined,
+      completedCountModifiedAt: status.requestStatus.completedCountModifiedAt ?? undefined,
+      tradesCount: status.requestStatus.tradesCount ?? undefined,
+      tradesCountModifiedAt: status.requestStatus.tradesCountModifiedAt ?? undefined,
+    },
     message: status.message ?? undefined,
     replyMessage: status.replyMessage ?? undefined,
-    statusId: status.statusId ?? undefined
+    statusId: status.statusId ?? undefined,
+    responseDueDate: status.responseDueDate ?? undefined,
   };
 }
 
@@ -168,7 +176,8 @@ export function convertTradeResponseModelToTradeResponseDataType(
     downstreamPart: convertPartsModelToPartsWithoutLevel(
       tradeResponse.partsModel
     ),
-    tradeTreeStatus: tradeResponse.statusModel.requestStatus.tradeTreeStatus
+    tradeTreeStatus: tradeResponse.statusModel.requestStatus.tradeTreeStatus,
+    responseDueDate: tradeResponse.statusModel.responseDueDate ?? undefined,
   };
 }
 
@@ -179,11 +188,13 @@ export function convertCfpRequestFormRowTypeToTradeRequestModel(
   return {
     statusModel: {
       message: formRow.message,
+      replyMessage: null,
       // @ts-ignore 仕様書のモデル上requestStatusは中身の指定が必要だが、仕様書のexampleでは空オブジェクトでリクエストするのが正とされているため、型エラーを無視する
       requestStatus: {},
       requestType: 'CFP',
       statusId: null,
       tradeId: null,
+      responseDueDate: formRow.responseDueDate,
     },
     tradeModel: {
       downstreamOperatorId: userOperatorId,
@@ -301,9 +312,17 @@ export function convertTradeStatusToStatusModel(
   return {
     message: tradeStatus.message ?? null,
     replyMessage: tradeStatus.replyMessage ?? null,
-    requestStatus: tradeStatus.requestStatus,
+    requestStatus: {
+      cfpResponseStatus: tradeStatus.requestStatus.cfpResponseStatus,
+      tradeTreeStatus: tradeStatus.requestStatus.tradeTreeStatus,
+      completedCount: tradeStatus.requestStatus.completedCount ?? null,
+      completedCountModifiedAt: tradeStatus.requestStatus.completedCountModifiedAt ?? null,
+      tradesCount: tradeStatus.requestStatus.tradesCount ?? null,
+      tradesCountModifiedAt: tradeStatus.requestStatus.tradesCountModifiedAt ?? null,
+    },
     requestType: 'CFP',
     statusId: tradeStatus.statusId ?? null,
+    responseDueDate: '',
     tradeId: tradeId,
   };
 }
@@ -316,10 +335,15 @@ export function convertTradeResponseDataTypeToRejectStatusModel(
     replyMessage: tradeResponseData.replyMessage ?? null,
     requestStatus: {
       cfpResponseStatus: 'REJECT',
-      tradeTreeStatus: tradeResponseData.tradeTreeStatus
+      tradeTreeStatus: tradeResponseData.tradeTreeStatus,
+      completedCount: null,
+      completedCountModifiedAt: null,
+      tradesCount: null,
+      tradesCountModifiedAt: null,
     },
     requestType: 'CFP',
     statusId: tradeResponseData.statusId ?? null,
+    responseDueDate: tradeResponseData.responseDueDate ?? null,
     tradeId: tradeResponseData.tradeId ?? null,
   };
 }

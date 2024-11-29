@@ -41,7 +41,7 @@ export default function PartsRequestCfpPage() {
   const [isSheetLoading, setIsSheetLoading] = useState<boolean>(true);
   const [isTradeResponseLoading, setIsTradeResponseLoading] =
     useState<boolean>(true);
-  const [isOperaterLoading, setIsOperaterLoading] = useState<boolean>(true);
+  const [isOperatorLoading, setIsOperatorLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!traceId) return;
@@ -90,7 +90,7 @@ export default function PartsRequestCfpPage() {
               ),
             }))
           );
-          setIsOperaterLoading(false);
+          setIsOperatorLoading(false);
         }
       } catch (e) {
         handleError(e);
@@ -230,7 +230,7 @@ export default function PartsRequestCfpPage() {
             getOperator={getOperator}
             onCancelTradeRequest={handleCancelTradeRequest}
             isTradeResponseLoading={isTradeResponseLoading}
-            isOperaterLoading={isOperaterLoading}
+            isOperatorLoading={isOperatorLoading}
           />,
         ]}
       />

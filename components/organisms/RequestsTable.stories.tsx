@@ -32,7 +32,8 @@ const items: TradeResponseDataType[] = [
       terminatedFlag: true,
       traceId: '694q9wmf-9485-8839-kemo-83skelnr2e44',
     },
-    tradeTreeStatus: 'TERMINATED'
+    tradeTreeStatus: 'TERMINATED',
+    responseDueDate: '2024-12-31'
   },
   {
     downstreamOperatorId: '123456789abcdefghijklmnopqrstuvwxyz',
@@ -53,7 +54,8 @@ const items: TradeResponseDataType[] = [
       terminatedFlag: true,
       traceId: '694q9wmf-9485-8839-kemo-83skelnr2e44',
     },
-    tradeTreeStatus: 'UNTERMINATED'
+    tradeTreeStatus: 'UNTERMINATED',
+    responseDueDate: '2024-11-31'
   },
   {
     downstreamOperatorId: '123456789abcdefghijklmnopqrstuvwxyz',
@@ -71,7 +73,8 @@ const items: TradeResponseDataType[] = [
       terminatedFlag: true,
       traceId: '694q9wmf-9485-8839-kemo-83skelnr2e44',
     },
-    tradeTreeStatus: 'TERMINATED'
+    tradeTreeStatus: 'TERMINATED',
+    responseDueDate: '2024-01-31'
   },
 ];
 

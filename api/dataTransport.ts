@@ -19,7 +19,7 @@ type UrlPaths = keyof paths;
 
 type HttpMethods = keyof UnionToIntersection<paths[keyof paths]>;
 
-type HttpStatus = '200' | '201';
+type HttpStatus = '200' | '201' | '204';
 
 type HttpMethodsFilteredByPath<Path extends UrlPaths> = HttpMethods &
   keyof UnionToIntersection<paths[Path]>;
@@ -113,6 +113,14 @@ async function fetchFromDataTransport<
   if (res && !res.ok) {
     const body = (await res.json()) as DataTransportApiErrorModels;
     throw new DataTransportAPIError(res.status, body);
+  }
+
+  if (res.status === 204) {
+    return {
+      res: undefined as ResponseData<Path, Method, Status>,
+      headers: res.headers,
+      status: res.status,
+    };
   }
 
   return {
@@ -213,6 +221,15 @@ export const dataTransportApiClient = {
     });
     const next = getNext(headers);
     return { res, next };
+  },
+  // #19 部品情報削除
+  async deleteParts(traceId: string) {
+    await fetchFromDataTransport({
+      url: `/api/v1/datatransport?dataTarget=parts&traceId=${traceId}` as
+        '/api/v1/datatransport?dataTarget=parts&traceId={uuid}',
+      method: 'delete',
+      status: '204',
+    });
   },
   // # 6 部品構成情報一覧更新
   async putPartsStructure(req: PartsStructureModel) {

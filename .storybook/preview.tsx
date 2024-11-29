@@ -4,6 +4,16 @@ import type { Preview } from '@storybook/react';
 import '../app/globals.css';
 import './storybook.css';
 
+const customViewports = {
+  sampleView: {
+    name: 'Sample View',
+    styles: {
+      width: '1424px',
+      height: 'calc(100vh - 43px)',
+    },
+  },
+};
+
 const preview: Preview = {
   parameters: {
     actions: { argTypesRegex: '^on[A-Z].*' },
@@ -13,6 +23,8 @@ const preview: Preview = {
         date: /Date$/,
       },
     },
+    layout: 'fullscreen',
+    viewport: { viewports: customViewports },
   },
   decorators: [
     (Story) => (
