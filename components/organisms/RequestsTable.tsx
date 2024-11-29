@@ -1,26 +1,25 @@
 'use client';
-
+import { Button } from '@/components/atoms/Button';
+import DisplayHyphen from '@/components/atoms/DisplayHyphen';
+import Pagination from '@/components/atoms/Pagination';
+import StatusBadge from '@/components/atoms/StatusBadge';
+import Tooltip from '@/components/atoms/Tooltip';
 import {
   Column,
   DataTable,
   ParentHeader,
 } from '@/components/molecules/DataTable';
+import PopupModal from '@/components/molecules/PopupModal';
+import TooltipDetailInfoHorizontal from '@/components/molecules/TooltipDetailInfoHorizontal';
 import {
-  TradeResponseDataType,
   Operator,
   PartsWithoutLevel,
+  TradeResponseDataType,
 } from '@/lib/types';
-import { ChatCenteredText } from '@phosphor-icons/react/dist/ssr';
-import StatusBadge from '@/components/atoms/StatusBadge';
-import { Button } from '@/components/atoms/Button';
-import Tooltip from '@/components/atoms/Tooltip';
 import { isEmpty, tradeResponseStatusAttributes } from '@/lib/utils';
-import DisplayHyphen from '@/components/atoms/DisplayHyphen';
-import PopupModal from '@/components/molecules/PopupModal';
-import { useState, useMemo, ComponentProps, useCallback } from 'react';
 import { Info } from '@phosphor-icons/react';
-import TooltipDetailInfoHorizontal from '@/components/molecules/TooltipDetailInfoHorizontal';
-import Pagination from '@/components/atoms/Pagination';
+import { ChatCenteredText } from '@phosphor-icons/react/dist/ssr';
+import { ComponentProps, useCallback, useMemo, useState } from 'react';
 
 function getColumns(
   gotoLinkPartsPage: ComponentProps<typeof RequestsTable>['onPartsSelection'],
@@ -73,7 +72,7 @@ function getColumns(
     {
       id: 'downstreamPart',
       headerElement: '部品項目',
-      width: 130,
+      width: 110,
       renderCell: (value) =>
         isEmpty(value.partsName) ? (
           <DisplayHyphen className='text-xs ' />
@@ -86,13 +85,26 @@ function getColumns(
     {
       id: 'downstreamPart',
       headerElement: '補助項目',
-      width: 130,
+      width: 110,
       renderCell: (value) =>
         isEmpty(value.supportPartsName) ? (
           <DisplayHyphen className='text-xs ' />
         ) : (
           <span className='text-xs font-normal break-all '>
             {value.supportPartsName}
+          </span>
+        ),
+    },
+    {
+      id: 'responseDueDate',
+      headerElement: '回答希望日',
+      width: 110,
+      renderCell: (value) =>
+        isEmpty(value) ? (
+          <DisplayHyphen className='text-xs ' />
+        ) : (
+          <span className='text-xs font-normal break-all'>
+            {value!.replaceAll('-', '/')}
           </span>
         ),
     },
@@ -127,10 +139,11 @@ function getColumns(
           <Tooltip
             message={
               <>
-                <div className='font-semibold mb-2 text-xs text-white'>
+                <div className='font-semibold mb-2 text-xs text-white'>メッセージ</div>
+                <div className='font-normal text-xs text-white truncate ... max-w-[250px]'>
+                  {isEmpty(value) ? <DisplayHyphen className='text-xs' /> : value}
                   メッセージ
                 </div>
-                <div className='font-normal text-xs text-white'>{value}</div>
               </>
             }
           >
@@ -197,7 +210,7 @@ function getColumns(
 const parentHeaders: ParentHeader[] = [
   {
     id: 'requestInfo',
-    colspan: 6,
+    colspan: 7,
     headerElement: '依頼情報',
   },
   {

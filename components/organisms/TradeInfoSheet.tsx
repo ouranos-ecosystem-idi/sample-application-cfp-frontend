@@ -22,7 +22,7 @@ export default function TradeInfoSheet({
       skeletonProperty={{ isLoading: isLoading, height: 'h-52' }}
     >
       <DetailInfoHorizontal
-        gap={72}
+        gap={70}
         data={[
           {
             header: '事業者名',
@@ -59,17 +59,26 @@ export default function TradeInfoSheet({
           {
             header: 'トレース識別子',
             value: tradeResponseData.downstreamTraceId,
-            width: 308,
+            width: 160,
           },
           {
             header: '単位',
             value: partsToShow?.amountRequiredUnit,
-            width: 120,
+            width: 100,
+          },
+          {
+            header: '回答希望日',
+            value: isEmpty(tradeResponseData.responseDueDate) ?
+              (<DisplayHyphen />) :
+              tradeResponseData.responseDueDate!.replaceAll('-', '/'),
+            width: 100,
           },
         ]}
       />
       <div className='mt-5 mb-2 text-xs'>メッセージ</div>
-      <div className='text-base'>{tradeResponseData.message ? tradeResponseData.message : <DisplayHyphen />}</div>
+      <div className='text-base max-h-[90px] w-full break-words overflow-y-auto'>
+        {tradeResponseData.message ? tradeResponseData.message : <DisplayHyphen align='left' />}
+      </div>
     </Card>
   );
 }

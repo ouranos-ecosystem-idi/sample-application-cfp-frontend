@@ -212,7 +212,7 @@ export function DataTable({
         <table className={'table-auto w-full'}>
           <thead
             className={`after:table-row after:h-2 z-10 before:content-[""]
-            before:absolute before:bottom-2 before:w-[1370px] before:left-[-5px]
+            before:absolute before:bottom-2 before:w-[1381px] before:left-[-2px]
             before:bg-[#FAFAFA] before:z-[-1] ${stickyOptions?.beforeHeight === 'h-32'
                 ? 'before:h-32'
                 : `before:h-96`

@@ -18,7 +18,7 @@ const outer = tv({
       bottom: 'items-end',
     },
     backgroudTop: {
-      true: 'before:content-[""] before:w-full before:absolute before:bottom-0 before:w-[1370px] before:bg-[#FAFAFA] before:z-[-1] before:h-32  before:left-[-5px]',
+      true: 'before:content-[""] before:w-[1381px] before:absolute before:bottom-0 before:bg-[#FAFAFA] before:z-[-1] before:h-32  before:left-[-2px]',
       false: '',
     },
   },

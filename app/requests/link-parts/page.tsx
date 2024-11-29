@@ -62,7 +62,8 @@ export default function RequestsLinkPartsPage() {
       downstreamTraceId: '',
       tradeId: '',
       upstreamTraceId: '',
-      tradeTreeStatus: 'TERMINATED'
+      tradeTreeStatus: 'TERMINATED',
+      responseDueDate: ''
     });
 
   // 紐づけ済みの部品を取得

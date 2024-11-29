@@ -1,6 +1,20 @@
+import { Button } from '@/components/atoms/Button';
+import CheckBox from '@/components/atoms/CheckBox';
+import DatePickerWithStyle from '@/components/atoms/DatePickerWithStyle';
+import DisplayHyphen from '@/components/atoms/DisplayHyphen';
+import InputTextArea from '@/components/atoms/InputTextArea';
 import InputTextBox from '@/components/atoms/InputTextBox';
+import SkeletonColumn from '@/components/atoms/SkeletonColumn';
+import StatusBadge from '@/components/atoms/StatusBadge';
+import Tab from '@/components/atoms/Tab';
+import Tooltip from '@/components/atoms/Tooltip';
+import { Column, DataTable } from '@/components/molecules/DataTable';
+import PopupModal from '@/components/molecules/PopupModal';
+import SectionHeader from '@/components/molecules/SectionHeader';
+import { PlantCell } from '@/components/organisms/PlantCell';
 import {
-  Plant, TradeRequestDataType, Operator,
+  Operator,
+  Plant, TradeRequestDataType,
   TradeRequestDataTypeWithOperator,
 } from '@/lib/types';
 import {
@@ -11,28 +25,18 @@ import {
   isEmpty,
   separateTradeRequestDataByRequestedStatus,
 } from '@/lib/utils';
-import { Column, DataTable } from '@/components/molecules/DataTable';
-import StatusBadge from '@/components/atoms/StatusBadge';
-import SectionHeader from '@/components/molecules/SectionHeader';
-import { Button } from '@/components/atoms/Button';
-import CheckBox from '@/components/atoms/CheckBox';
-import { Trash } from '@phosphor-icons/react/dist/ssr/Trash';
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { FormikProvider, useFormik } from 'formik';
-import * as Yup from 'yup';
 import '@/lib/yup.locale';
-import DisplayHyphen from '@/components/atoms/DisplayHyphen';
-import PopupModal from '@/components/molecules/PopupModal';
-import { PlantCell } from '@/components/organisms/PlantCell';
-import InputTextArea from '@/components/atoms/InputTextArea';
-import Tab from '@/components/atoms/Tab';
-import SkeletonColumn from '@/components/atoms/SkeletonColumn';
+import { format } from 'date-fns';
+import { FormikProvider, useFormik } from 'formik';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import * as Yup from 'yup';
 
 // 入力フォームの型定義(1行分)
 export type CfpRequestFormRowType = {
   downstreamTraceId: string;
   openOperatorId: string;
   operatorName: string;
+  responseDueDate: string;
   upstreamOperatorId: string;
   message: string;
   selected: boolean;
@@ -54,7 +58,7 @@ type Props = {
     tradeRequest: TradeRequestDataType[]
   ) => Promise<void>;
   isTradeResponseLoading: boolean;
-  isOperaterLoading: boolean;
+  isOperatorLoading: boolean;
 };
 
 export default function CfpRequestTable({
@@ -64,7 +68,7 @@ export default function CfpRequestTable({
   getOperator,
   onCancelTradeRequest,
   isTradeResponseLoading,
-  isOperaterLoading,
+  isOperatorLoading,
 }: Props) {
 
   // Propsで受け取ったデータを依頼済みかどうかで分割し、テーブル表示用の型に変換
@@ -103,8 +107,9 @@ export default function CfpRequestTable({
       then: (schema) => schema.required(),
     }),
     openOperatorId: Yup.string().max(20),
-    message: Yup.string().max(100),
+    message: Yup.string().max(1000),
     selected: Yup.boolean().required(),
+    responseDueDate: Yup.string().required(),
   });
 
   const validationSchema = Yup.object({
@@ -125,9 +130,10 @@ export default function CfpRequestTable({
         ({ downStreamPart, upstreamOperatorId, operator }) => {
           return {
             downstreamTraceId: downStreamPart.traceId ?? '',
-            upstreamOperatorId: upstreamOperatorId ?? '',
             openOperatorId: operator?.openOperatorId ?? '',
             operatorName: operator?.operatorName ?? '',
+            responseDueDate: '',
+            upstreamOperatorId: upstreamOperatorId ?? '',
             message: '',
             selected: false,
             upstreamOperatorNotFound: false, // 検索前・検索後でバリデーション文言を出し分けるためフィールドとして追加
@@ -188,6 +194,42 @@ export default function CfpRequestTable({
       renderCell: (value) =>
         isEmpty(value.supportPartsName) ? <DisplayHyphen className='text-xs' /> : value.supportPartsName,
       width: 72,
+    },
+    {
+      id: 'tradeStatus',
+      headerElement: '進捗状況',
+      width: 72,
+      justifyHeader: 'center',
+      justify: 'center',
+      renderCell: (value) =>
+        isEmpty(value?.requestStatus.tradesCount) ? <DisplayHyphen className='text-xs' /> :
+          <Tooltip
+            message={
+              <>
+                <table className='text-left'>
+                  <tr>
+                    <th className='font-semibold mb-2 text-xs text-white'>取引関係数更新日時</th>
+                    <th className='font-semibold pl-2 mb-2 text-xs text-white'>回答完了数更新日時</th>
+                  </tr>
+                  <tr>
+                    <td className='font-semibold mb-2 text-xs text-white'>
+                      {isEmpty(value?.requestStatus.tradesCountModifiedAt)
+                        ? <DisplayHyphen className='text-xs text-white' />
+                        : value?.requestStatus.tradesCountModifiedAt?.replaceAll('-', '/').replace('T', ' ').replace('Z', '')}
+                    </td>
+                    <td className='font-semibold pl-2 mb-2 text-xs text-white'>
+                      {isEmpty(value?.requestStatus.completedCountModifiedAt)
+                        ? <DisplayHyphen className='text-xs text-white' />
+                        : value?.requestStatus.completedCountModifiedAt?.replaceAll('-', '/').replace('T', ' ').replace('Z', '')}
+                    </td>
+                  </tr>
+                </table>
+                <div className='font-normal text-xs text-white'>{ }</div>
+              </>
+            }
+          >
+            <div className='text-xs'>{isEmpty(value?.requestStatus.tradesCount) ? <DisplayHyphen className='text-xs' /> : value?.requestStatus.completedCount + '/' + value?.requestStatus.tradesCount}</div>
+          </Tooltip>
     },
     {
       id: 'downStreamPart',
@@ -314,12 +356,32 @@ export default function CfpRequestTable({
         },
       },
       {
+        id: 'responseDueDate',
+        headerElement: '回答希望日',
+        width: 120,
+        renderCell: (value, row, rowIdx) => {
+          return (
+            <DatePickerWithStyle
+              selected={isEmpty(formik.values.notRequestedCfp[rowIdx].responseDueDate) ? undefined : new Date(formik.values.notRequestedCfp[rowIdx].responseDueDate)}
+              {...formik.getFieldProps(`notRequestedCfp[${rowIdx}].responseDueDate`)}
+              placeholderText='希望日'
+              onChange={date => {
+                formik.setFieldValue(
+                  `notRequestedCfp[${rowIdx}].responseDueDate`,
+                  format(date, 'yyyy-MM-dd'),
+                );
+              }}
+            />
+          );
+        },
+      },
+      {
         id: 'message',
         headerElement: 'メッセージ',
-        width: 468,
+        width: 310,
         renderCell: (value, row, rowIdx) =>
           <InputTextArea
-            className='h-[60px] w-[466px]'
+            className='h-[60px] w-[310px]'
             {...formik.getFieldProps(`notRequestedCfp[${rowIdx}].message`)}
             error={getFormikErrorMessage({
               name: `notRequestedCfp[${rowIdx}].message`,
@@ -353,7 +415,7 @@ export default function CfpRequestTable({
       headerElement: '事業者識別子',
       width: 180,
       renderCell: (value) => {
-        if (isOperaterLoading)
+        if (isOperatorLoading)
           return <SkeletonColumn className='py-1' />;
         else return <div className='line-clamp-3 text-xs'>{value?.openOperatorId}</div>;
       },
@@ -364,7 +426,7 @@ export default function CfpRequestTable({
       width: 104,
       renderCell: (value) => {
         const width = 'w-[104px]';
-        if (isOperaterLoading)
+        if (isOperatorLoading)
           return <SkeletonColumn className='py-1' />;
         if (isEmpty(value)) {
           return <DisplayHyphen className={width} />;
@@ -374,11 +436,19 @@ export default function CfpRequestTable({
     },
     {
       id: 'tradeStatus',
+      width: 72,
+      headerElement: '回答希望日',
+      renderCell: (value) => isEmpty(value?.responseDueDate)
+        ? <DisplayHyphen align='center' />
+        : <div className='w-full text-xs'>{value?.responseDueDate?.replaceAll('-', '/')}</div>
+    },
+    {
+      id: 'tradeStatus',
       headerElement: 'メッセージ',
-      width: 468,
+      width: 310,
       renderCell: (value) => isEmpty(value?.message)
         ? <DisplayHyphen align='left' />
-        : value?.message,
+        : <div className='max-h-14 text-xs text-balance overflow-y-auto'>{value?.message}</div>
     },
   ];
 
@@ -395,7 +465,7 @@ export default function CfpRequestTable({
           <SectionHeader
             stickyOptions={{ top: 104 }}
             variant='h3'
-            className='pb-4'
+            className='pb-4 px-1'
             align='middle'
             leftChildren={[
               <Tab
@@ -442,7 +512,7 @@ export default function CfpRequestTable({
               columnsGapX={12}
               className='mb-6'
               emptyStateMessage='依頼未送信の部品構成はありません'
-              stickyOptions={{ top: 160, beforeHeight: 'h-32' }}
+              stickyOptions={{ top: 160, beforeHeight: 'h-96' }}
               isLoading={isTradeResponseLoading}
             />
           ) : (
@@ -455,7 +525,7 @@ export default function CfpRequestTable({
               edgePaddingX={16}
               columnsGapX={12}
               emptyStateMessage='依頼送信済の部品構成はありません'
-              stickyOptions={{ top: 160, beforeHeight: 'h-32' }}
+              stickyOptions={{ top: 160, beforeHeight: 'h-96' }}
               isLoading={isTradeResponseLoading}
             />
           )}

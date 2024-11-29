@@ -2,7 +2,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 type Props = {
-  selected: Date;
+  selected: Date | undefined;
   onChange: (date: Date) => void;
   maxDate?: Date;
   placeholderText?: string;

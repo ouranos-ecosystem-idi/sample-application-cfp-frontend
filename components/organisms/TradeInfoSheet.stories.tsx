@@ -29,6 +29,7 @@ const tradeResponseData: TradeResponseDataType = {
     traceId: '694q9wmf-9485-8839-kemo-83skelnr2e44',
   },
   tradeTreeStatus: 'TERMINATED',
+  responseDueDate: '2024-12-31',
 };
 const operatorsData: Operator[] = [
   {

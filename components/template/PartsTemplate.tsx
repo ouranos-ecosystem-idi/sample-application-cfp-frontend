@@ -1,16 +1,16 @@
 'use client';
+import { repository } from '@/api/repository';
+import { useAlert } from '@/components/template/AlertHandler';
+import useErrorHandler from '@/components/template/ErrorHandler';
 import BackButton from '@/components/atoms/BackButton';
+import ErrorSheet from '@/components/molecules/ErrorSheet';
+import LoadingScreen from '@/components/molecules/LoadingScreen';
 import PartsDetail from '@/components/organisms/PartsDetailTable';
 import Template from '@/components/template/Template';
-import { repository } from '@/api/repository';
-import useErrorHandler from '@/components/template/ErrorHandler';
-import { PartsStructure, Plant } from '@/lib/types';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import { useAlert } from '@/components/template/AlertHandler';
 import { getPlants } from '@/lib/plantSessionUtils';
-import LoadingScreen from '@/components/molecules/LoadingScreen';
-import ErrorSheet from '@/components/molecules/ErrorSheet';
+import { PartsStructure, Plant } from '@/lib/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 function usePartsHook(returnUrl: string) {
   const handleError = useErrorHandler();
@@ -65,6 +65,19 @@ function usePartsHook(returnUrl: string) {
     [handleError, router, plants]
   );
 
+  async function onDeleteSubmit(value: string) {
+    setIsLoading(true);
+    try {
+      await repository.deletePartsStructure(value);
+      router.push(returnUrl);
+      showAlert.info('部品構成情報の削除を申請しました。');
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     partsStructure,
     plants,
@@ -75,6 +88,7 @@ function usePartsHook(returnUrl: string) {
     isErrorDisplayOpen,
     setIsErrorDisplayOpen,
     setErrorMessage,
+    onDeleteSubmit,
   };
 }
 
@@ -89,6 +103,7 @@ export default function PartsDetailTemplate({
     partsStructure,
     plants,
     onSubmit,
+    onDeleteSubmit,
     isLoading,
     isPartsLoading,
     errorMessage,
@@ -118,6 +133,7 @@ export default function PartsDetailTemplate({
             partsStructure={partsStructure}
             plants={plants}
             onSubmit={onSubmit}
+            onDeleteSubmit={onDeleteSubmit}
             isPartsLoading={isPartsLoading}
             setErrorMessage={setErrorMessage}
             setIsErrorDisplayOpen={setIsErrorDisplayOpen}

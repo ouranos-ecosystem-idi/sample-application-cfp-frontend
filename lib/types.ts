@@ -94,7 +94,12 @@ export type TradeStatus = {
   requestStatus: {
     cfpResponseStatus: CfpResponseStatusType;
     tradeTreeStatus: TradeTreeStatusType;
+    completedCount?: number;
+    completedCountModifiedAt?: string;
+    tradesCount?: number;
+    tradesCountModifiedAt?: string;
   };
+  responseDueDate?: string;
 };
 
 export type TradeRequestDataType = {
@@ -125,6 +130,7 @@ export type TradeResponseDataType = {
   upstreamPart?: Parts;
   downstreamPart?: PartsWithoutLevel;
   tradeTreeStatus: TradeTreeStatusType;
+  responseDueDate?: string;
 };
 
 export type PartsFormRowType = {

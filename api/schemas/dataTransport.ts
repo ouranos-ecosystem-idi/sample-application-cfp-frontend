@@ -88,6 +88,10 @@ export interface paths {
      *
      * - globalOperatorIdは全ての登録情報上で重複して登録はできません。
      *
+     * - globalOperatorIdを登録しない場合はoperatorAttributeを指定しない場合の問い合わせを実施します。この場合は重複チェックの対象になりません
+     *
+     * - globalOperatorIdを空文字等で登録した場合はglobalOperatorIdに値が登録されるため重複チェックの対象になります。
+     *
      * - 更新時に指定するoperatorIdは、認証によって得られたoperatorIdと同じ値を指定する必要があります。異なる場合は403エラーとなります。
      */
     put: {
@@ -224,6 +228,10 @@ export interface paths {
      *
      * - globalPlantIdは同じ事業者内では重複して登録はできません。
      *
+     * - globalPlantIdを登録しない場合はplantAttributeを指定しない場合の問い合わせを実施します。この場合は重複チェックの対象になりません
+     *
+     * - globalPlantIdを空文字等で登録した場合はglobalPlantIdに値が登録されるため重複チェックの対象になります。
+     *
      * - openPlantIdは末尾6桁が数字であり、同じ事業者内では重複して登録はできません。
      *
      * - 更新時に指定するoperatorIdは、認証によって得られたoperatorIdと同じ値を指定する必要があります。異なる場合は403エラーとなります。
@@ -346,6 +354,10 @@ export interface paths {
       responses: {
         /** @description CfpModelの配列を取得 */
         200: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.CfpModel"][];
           };
@@ -386,12 +398,18 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
   "/api/v1/datatransport?dataTarget=cfp": {
     /**
-     * #15CFP情報登録
+     * #15CFP情報更新
      * @description トレース識別子に紐づけられている製品にCFP情報を新規作成および更新します。
      *
      * 使用するモデル：CfpModel
@@ -401,15 +419,13 @@ export interface paths {
      *
      * - ghgDeclaredUnit: 指定された任意の値をGHG量単位として登録します。
      *
-     * - cfpCertificateList: ファイルの場所を指し示すURIを配列で複数登録することができます。
-     *
      * - cfpType: 登録するCFPの種別を識別します。現在は下記の種別を選択することができます。それぞれの値と意味合いは下記の通りです。以下の種別以外が指定された場合は400エラーとなります。
      *   - preProduction → 前処理自社由来排出量
      *   - mainProduction → 製造自社由来排出量
      *   - preComponent → 前処理部品由来排出量
      *   - mainComponent → 製造部品由来排出量
      *
-     * - トレーサビリティ管理システムへのcfp情報登録は上記全てのカテゴリーを一度に登録します。指定がないカテゴリーがある場合は400エラーとなります。
+     * - トレーサビリティ管理システムへのCFP情報更新は上記全てのカテゴリーを一度に登録します。指定がないカテゴリーがある場合は400エラーとなります。
      *
      * - ghgDeclaredUnitにenumを設定します。enumの制限は下記です。
      *   - kgCO2e/liter
@@ -462,6 +478,10 @@ export interface paths {
       responses: {
         /** @description Created */
         201: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.CfpModel"][];
           };
@@ -502,6 +522,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -530,6 +556,10 @@ export interface paths {
       responses: {
         /** @description CfpModelの配列を取得 */
         200: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.CfpCertificationModel"][];
           };
@@ -570,6 +600,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -605,7 +641,7 @@ export interface paths {
            */
           limit?: number;
           /**
-           * @description データ取得開始位置の識別子を設定します。本項目はResponse HeaderのLink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
+           * @description データ取得開始位置の識別子を設定します。本項目はResponse Headerのlink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
            * @example d9a38406-cae2-4679-b052-15a75f553110
            */
           after?: string;
@@ -635,8 +671,10 @@ export interface paths {
         /** @description PartsModelの配列を取得 */
         200: {
           headers: {
-            /** @description \<https://example.com/api/v1/datatransport?dataTarget=parts&limit=100&after=(uuid)\>; rel="next */
-            Link?: string;
+            /** @description \<https://example.com/api/v1/datatransport?dataTarget=parts&limit=100&after=(uuid)\>; */
+            link?: string;
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
           };
           content: {
             "application/json": components["schemas"]["traceability.PartsModel"][];
@@ -678,6 +716,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
     /**
@@ -710,6 +754,12 @@ export interface paths {
      *   - ton-kilometer
      *   - square-meter
      *   - unit
+     *
+     * ### 本API利用上の注意点
+     * - 本APIは「親部品の新規作成」および「子部品を持たない親部品の部品情報更新」を対象としております。
+     *
+     * - その他の場合に本APIを利用しますと、意図しない挙動になってしまうためご注意ください。
+     * （例：子部品を持った親部品を本APIで更新した場合、子部品がない状態に更新されてしまう）
      */
     put: {
       parameters: {
@@ -730,6 +780,10 @@ export interface paths {
       responses: {
         /** @description Created */
         201: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.PartsModel"];
           };
@@ -770,6 +824,100 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/datatransport?dataTarget=parts&traceId={uuid}": {
+    /**
+     * #19部品情報削除
+     * @description 【v2.0.0 追加API】
+     * 事業者識別子（内部）、トレース識別子に紐づいた部品を削除します。
+     *
+     *
+     * ### 本API利用上の注意点
+     * - 削除対象の部品に「親部品」として「部品構成情報」がある場合は削除できません。
+     *   - エラーが発生した場合には紐づく部品構成情報を削除してから再度実行してください。
+     * - 削除対象の部品に「子部品」として「部品構成情報」がある場合は削除できません。
+     *   - エラーが発生した場合は紐づく部品構成情報を削除してから再度実行してください。
+     * - 削除対象の部品が納品先からの依頼に紐づけられている場合は削除できません。
+     *   - エラーが発生した場合は納品先が紐づく依頼を取り下げてから再度実行してください。
+     * - 削除対象の部品が仕入先への依頼に紐づけられている場合は削除できません。
+     *   - エラーが発生した場合は紐づく依頼を取り下げてから再度実行してください。
+     * - 部品に紐づく「CFP情報」・「CFP証明書情報」は削除されます。
+     * - データ削除自体は非同期処理となるため、即時処理ではありません。
+     */
+    delete: {
+      parameters: {
+        query: {
+          /**
+           * @description データターゲット
+           * @example parts
+           */
+          dataTarget: string;
+          /**
+           * @description トレース識別子
+           * @example cb9a4840-8b45-40c8-a647-08688ca68c4e
+           */
+          traceId: string;
+        };
+      };
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
+          content: never;
+        };
+        /** @description リクエスト自体に問題がある場合の異常ステータスコード */
+        400: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP400Error"];
+          };
+        };
+        /** @description 提供された認証情報が無効または問題がある場合の異常ステータスコード */
+        401: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP401Error"];
+          };
+        };
+        /** @description クライアントがリソースへのアクセスを拒否された場合の異常ステータスコード */
+        403: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP403Error"];
+          };
+        };
+        /** @description 要求されたリソースが存在しない場合の異常ステータスコード */
+        404: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP404Error"];
+          };
+        };
+        /** @description システムの内部にてエラーが発生している場合 */
+        500: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP500Error"];
+          };
+        };
+        /** @description システムの外部にてエラーが発生している場合 */
+        503: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP503Error"];
+          };
+        };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -800,6 +948,10 @@ export interface paths {
       responses: {
         /** @description PartsStructureModelを取得 */
         200: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.PartsStructureModel"];
           };
@@ -838,6 +990,12 @@ export interface paths {
         503: {
           content: {
             "application/json": components["schemas"]["common.HTTP503Error"];
+          };
+        };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
           };
         };
       };
@@ -900,6 +1058,10 @@ export interface paths {
       responses: {
         /** @description Created */
         201: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.PartsStructureModel"];
           };
@@ -940,6 +1102,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -958,12 +1126,15 @@ export interface paths {
      *     - NOT_COMPLETED: 依頼中
      *     - COMPLETED: 回答完了
      *     - REJECT: 差戻
-     *     - CANCEL: 取消
      *
      *   - tradeTreeStatus: 対象の取引関係情報が全て終端したかを表します。ステータスの種類と意味合いは以下になります。
      *
      *     - TERMINATED: 終端済み
      *     - UNTERMINATED: 未終端
+     *
+     *   - completedCount: 依頼先を含む川上企業の回答完了数を表します。tradesCountを用いて、依頼に対する回答状況の進捗を示すために利用してください。
+     *
+     *   - tradesCount: 依頼先を含む川上企業のCFP回答依頼件数を表します。tradeTreeStatus.TERMINATED となるまでは、件数が増えることを考慮して利用してください。
      *
      * - requestType：取引の依頼種別を指定します。現在は下記指定が可能です。
      *
@@ -976,9 +1147,10 @@ export interface paths {
      *     - REQUEST: 依頼情報（自社が依頼元）のステータスを取得します
      *     - RESPONSE: 回答情報（自社が依頼先）のステータスを取得します
      *
-     *   - traceId: 指定されたstatusIdに一致する結果のみ返却します。絞り込みは"statusTarget=REQUEST"を併用した場合のみ有効になります
+     *   - traceId: 指定されたtraceIdに一致する結果のみ返却します。絞り込みは"statusTarget=REQUEST"を併用した場合のみ有効になります。
      *
      *   - statusId: 指定されたstatusIdに一致する結果のみ返却します。絞り込みは"statusTarget=RESPONSE"を併用した場合は検索時間が短いが、statusIdのみ指定した場合は応答時間が長くなる可能性がございます。
+     *   "statusTarget=REQUEST"と併用して利用することはできません。
      *
      * - 取得時のソート順：取引関係作成日時の降順
      */
@@ -996,7 +1168,7 @@ export interface paths {
            */
           limit?: number;
           /**
-           * @description データ取得開始位置の識別子を設定します。本項目はResponse HeaderのLink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
+           * @description データ取得開始位置の識別子を設定します。本項目はResponse Headerのlink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
            * @example d9a38406-cae2-4679-b052-15a75f553110
            */
           after?: string;
@@ -1021,8 +1193,10 @@ export interface paths {
         /** @description StatusModelの配列を取得 */
         200: {
           headers: {
-            /** @description \<https://example.com/api/v1/datatransport?dataTarget=status&limit=100&after=(uuid)\>; rel="next */
-            Link?: string;
+            /** @description \<https://example.com/api/v1/datatransport?dataTarget=status&limit=100&after=(uuid)\>; */
+            link?: string;
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
           };
           content: {
             "application/json": components["schemas"]["traceability.StatusModel"][];
@@ -1064,6 +1238,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
     /**
@@ -1072,9 +1252,11 @@ export interface paths {
      *
      * トレーサビリティ管理システムではrequestStatusフィールドのcfpResponseStatusが取消(CANCEL)か差戻(REJECT)の場合に取り消しと差戻の処理を実施します。
      *
+     * cfpResponseStatusとtradeTreeStatusは必須項目のため、必ず値を指定してください。
      * 取消(CANCEL)と差戻以外(REJECT)のステータスが指定された場合は400エラーになります。
      *
      * 依頼差戻の場合のみ、replyMessageに差戻理由を記載し、保存することができます。依頼取消時にはreplyMessageはnullを指定してください。
+     * 依頼差戻、依頼取消ではresponseDueDate/completedCount/completedCountModifiedAtはnullを指定してください。null以外の値を指定しても保存されません。
      *
      * 依頼取消と依頼差戻の使い分けは下記を想定しております
      * - 依頼取消：川下（依頼元）が川上（依頼先）に出している依頼を取り消す時に利用する
@@ -1101,6 +1283,10 @@ export interface paths {
       responses: {
         /** @description Created */
         201: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
           };
         };
@@ -1140,6 +1326,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -1171,7 +1363,7 @@ export interface paths {
            */
           limit?: number;
           /**
-           * @description データ取得開始位置の識別子を設定します。本項目はResponse HeaderのLink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
+           * @description データ取得開始位置の識別子を設定します。本項目はResponse Headerのlink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
            * @example d9a38406-cae2-4679-b052-15a75f553110
            */
           after?: string;
@@ -1186,8 +1378,10 @@ export interface paths {
         /** @description TraceModelの配列を取得 */
         200: {
           headers: {
-            /** @description \<https://example.com/api/v1/datatransport?dataTarget=tradeRequest&limit=100&after=(uuid)\>; rel="next */
-            Link?: string;
+            /** @description \<https://example.com/api/v1/datatransport?dataTarget=tradeRequest&limit=100&after=(uuid)\>; */
+            link?: string;
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
           };
           content: {
             "application/json": components["schemas"]["traceability.TradeModel"][];
@@ -1229,27 +1423,34 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
     /**
      * #7取引関係依頼情報更新
-     * @description トレース識別子で指定した部品の取引情報を登録または更新します。
+     * @description トレース識別子で指定した部品の取引情報を登録します。
      *
      * 使用するモデル：TradeRequestModel（Trademodel & StatusModel）
      *
      * - downstreamOperatorIdは変更できません。指定するdownstreamOperatorIdは、認証によって得られたoperatorIdと同じ値を指定する必要があります。異なる場合は403エラーとなります。
      *
-     * - Reuest Bodyに指定したupstreamOperatorIdが存在しない場合は404エラーとなります。
+     * - Request Bodyに指定したupstreamOperatorIdが存在しない場合は404エラーとなります。
      *
      * - 新規作成時のTradeModelの内容は以下の通りとなります。
      *
      *   - downstreamOperatorId, upstreamOperatorId, downstreamTraceIdを入力し、tradeIdとupstreamTraceIdはnullを指定してください。
-     *   tradeIdはResponse BodyのTradeRquestMdelに発番されたIDが代入されます。
+     *   tradeIdはResponse BodyのTradeRequestModelに発番されたIDが代入されます。
      *
      * - 新規作成時のStatusModelの内容は以下の通りとなります。
      *
-     *   - tradeId, statusIdはnullを指定してください。tradeId, statusIdはResponse BodyのTradeRquestMdelに発番されたIDが代入されます。
+     *   - tradeId, statusIdはnullを指定してください。tradeId, statusIdはResponse BodyのTradeRequestModelに発番されたIDが代入されます。
      *   - requestTypeは"CFP"を指定します。
+     *   - responseDueDateはnullable: trueとなっていますが、必須項目のため、新規作成時にはnull以外を指定ください。nullを指定した場合エラーとなります。
      *
      * - requestStatusの値およびreplyMessageは変更できない情報になります。
      *
@@ -1274,6 +1475,10 @@ export interface paths {
       responses: {
         /** @description Created */
         201: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.TradeRequestModel"];
           };
@@ -1314,6 +1519,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -1321,11 +1532,33 @@ export interface paths {
     /**
      * #12取引関係回答情報一覧取得
      * @description 事業者識別子（内部）に紐づいた、回答を依頼されている取引情報の一覧を取得します。
-     * 取引情報に紐づいた依頼元の部品情報（downstreamTraceIdの部品情報）およびおよびステータスの情報を取得します。
+     * 取引情報に紐づいた依頼元の部品情報（downstreamTraceIdの部品情報）およびステータスの情報を取得します。
      *
      * 川下の活動量は川上には非開示情報のため、nullを渡します。
      *
      * 取得されるモデル：TradeResponseModel(TradeModel&PartsModel&StatusModel)
+     *
+     * - StatusModel
+     *
+     *   - requestStatus：取引の依頼種別で指定した範囲が扱うステータスを配列で全て返却します。
+     * トレーサビリティ管理システムでは下記が返却されます。
+     *
+     *     - cfpResponseStatus: CFPの回答状況を表します。ステータスの種類と意味合いは以下になります。
+     *
+     *       - NOT_COMPLETED: 依頼中
+     *       - COMPLETED: 回答完了
+     *       - REJECT: 差戻
+     *
+     *     - tradeTreeStatus: 対象の取引関係情報が全て終端したかを表します。ステータスの種類と意味合いは以下になります。
+     *
+     *       - TERMINATED: 終端済み
+     *       - UNTERMINATED: 未終端
+     *
+     *     - completedCount:
+     *       依頼先を含む川上企業の回答完了数を表します。tradesCountを用いて、依頼に対する回答状況の進捗を示すために利用してください。
+     *
+     *     - tradesCount: 依頼先を含む川上企業のCFP回答依頼件数を表します。tradeTreeStatus.TERMINATED となるまでは、件数が増えることを考慮して利用してください。
+     *
      *
      * 取得時のソート順：取引関係作成日時の降順
      */
@@ -1343,7 +1576,7 @@ export interface paths {
            */
           limit?: number;
           /**
-           * @description データ取得開始位置の識別子を設定します。本項目はResponse HeaderのLink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
+           * @description データ取得開始位置の識別子を設定します。本項目はResponse Headerのlink項目で返却されたクエリパラメータの組み合わせにて利用されることを想定しており、after単体での利用は想定しておりません。
            * @example d9a38406-cae2-4679-b052-15a75f553110
            */
           after?: string;
@@ -1353,8 +1586,10 @@ export interface paths {
         /** @description TradeModelの配列を取得 */
         200: {
           headers: {
-            /** @description \<https://example.com/api/v1/datatransport?dataTarget=tradeResponse&limit=100&after=(uuid)\>; rel="next */
-            Link?: string;
+            /** @description \<https://example.com/api/v1/datatransport?dataTarget=tradeResponse&limit=100&after=(uuid)\>; */
+            link?: string;
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
           };
           content: {
             "application/json": components["schemas"]["traceability.TradeResponseModel"][];
@@ -1396,6 +1631,12 @@ export interface paths {
             "application/json": components["schemas"]["common.HTTP503Error"];
           };
         };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
+          };
+        };
       };
     };
   };
@@ -1431,6 +1672,10 @@ export interface paths {
       responses: {
         /** @description Created */
         201: {
+          headers: {
+            /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+            "x-track"?: string;
+          };
           content: {
             "application/json": components["schemas"]["traceability.TradeModel"];
           };
@@ -1469,6 +1714,12 @@ export interface paths {
         503: {
           content: {
             "application/json": components["schemas"]["common.HTTP503Error"];
+          };
+        };
+        /** @description システムの外部にてエラーが発生している場合 */
+        504: {
+          content: {
+            "application/json": components["schemas"]["common.HTTP504Error"];
           };
         };
       };
@@ -1622,12 +1873,6 @@ export interface paths {
         400: {
           content: {
             "application/json": components["schemas"]["common.HTTP400Error"];
-          };
-        };
-        /** @description 提供された認証情報が無効または問題がある場合の異常ステータスコード */
-        401: {
-          content: {
-            "application/json": components["schemas"]["common.HTTP401Error"];
           };
         };
         /** @description クライアントがリソースへのアクセスを拒否された場合の異常ステータスコード */
@@ -1850,12 +2095,12 @@ export interface components {
     "common.HTTP500Error": {
       /**
        * @description エラーステータス
-       * @example InternalServerError
+       * @example [traceability] InternalServerError
        */
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00Z dataTarget:operator method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6, timeStamp:2023-09-25T14:30:00Z, dataTarget:operator, method:GET
        */
       detail?: string;
       /**
@@ -1867,17 +2112,34 @@ export interface components {
     "common.HTTP503Error": {
       /**
        * @description エラーステータス
-       * @example Service Unavailable
+       * @example [traceability] ServiceUnavailable
        */
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00Z dataTarget:operator method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6, timeStamp:2023-09-25T14:30:00Z dataTarget:operator, method:GET
        */
       detail?: string;
       /**
        * @description エラーメッセージ
        * @example Unexpected error occurred in outer service
+       */
+      message?: string;
+    };
+    "common.HTTP504Error": {
+      /**
+       * @description エラーステータス
+       * @example [traceability] Timeout
+       */
+      code?: string;
+      /**
+       * @description 基盤運営事業者向け調査情報
+       * @example Endpoint request timed out
+       */
+      detail?: string;
+      /**
+       * @description エラーメッセージ
+       * @example
        */
       message?: string;
     };
@@ -1891,7 +2153,7 @@ export interface components {
       /**
        * @description 登録するCFP種別
        * @example preProduction
-       * @enum {string}
+       * @enum {unknown}
        */
       cfpType: "preProduction" | "mainProduction" | "preComponent" | "mainComponent" | "preProductionTotal" | "mainProductionTotal" | "preComponentTotal" | "mainComponentTotal" | "preProductionResponse" | "mainProductionResponse";
       /**
@@ -1912,6 +2174,7 @@ export interface components {
        * @enum {string}
        */
       dqrType: "preProcessing" | "mainProcessing" | "preProcessingTotal" | "mainProcessingTotal" | "preProcessingResponse" | "mainProcessingResponse";
+      /** @description 登録するDQR値 */
       dqrValue: {
         /**
          * Format: double
@@ -1950,8 +2213,10 @@ export interface components {
        * @example xx県xx市xxxx町1-1
        */
       operatorAddress: string;
+      /** @description 事業者の属性情報 */
       operatorAttribute: {
-        globalOperatorId?: string;
+        /** @description 事業者識別子（グローバル） */
+        globalOperatorId?: string | null;
       };
       /**
        * Format: uuid
@@ -1988,7 +2253,7 @@ export interface components {
        * @description 部品項目
        * @example PartsA-002123
        */
-      partsName: string | null;
+      partsName: string;
       /**
        * Format: uuid
        * @description 事業所識別子（内部）
@@ -2021,7 +2286,7 @@ export interface components {
     "traceability.PlantModel": {
       /**
        * @description 事業所識別子（ローカル）
-       * @example 1234567890123000000
+       * @example 9876543210987123456
        */
       openPlantId: string;
       /**
@@ -2046,8 +2311,10 @@ export interface components {
        * @example A工場
        */
       plantName: string;
+      /** @description 事業所の属性情報 */
       plantAttribute: {
-        globalPlantId?: string;
+        /** @description 事業所識別子（グローバル） */
+        globalPlantId?: string | null;
       };
     };
     "traceability.StatusModel": {
@@ -2073,6 +2340,32 @@ export interface components {
          * @enum {string}
          */
         tradeTreeStatus: "TERMINATED" | "UNTERMINATED";
+        /**
+         * @description 回答完了数 【v2.0.0 追加項目】
+         *
+         * @example 1
+         */
+        completedCount?: number | null;
+        /**
+         * Format: date-time
+         * @description 回答完了数更新日時 【v2.0.0 追加項目】
+         *
+         * @example 2024-05-23T11:22:33Z
+         */
+        completedCountModifiedAt?: string | null;
+        /**
+         * @description 取引関係数 【v2.0.0 追加項目】
+         *
+         * @example 2
+         */
+        tradesCount?: number | null;
+        /**
+         * Format: date-time
+         * @description 取引関係数更新日時 【v2.0.0 追加項目】
+         *
+         * @example 2024-05-24T22:33:44Z
+         */
+        tradesCountModifiedAt?: string | null;
       };
       /**
        * @description 依頼種別
@@ -2092,6 +2385,13 @@ export interface components {
        * @example d9a38406-cae2-4679-b052-15a75f5531f1
        */
       tradeId: string | null;
+      /**
+       * Format: date
+       * @description 回答希望日 【v2.0.0 追加項目】
+       *
+       * @example 2024-12-31
+       */
+      responseDueDate: string | null;
     };
     "traceability.TradeModel": {
       /**
@@ -2140,19 +2440,20 @@ export interface components {
        * @description CFP証明書識別子
        * @example 7e785ae2-e628-42dc-90af-96f91958edc7
        */
-      cfpCertificationId?: string;
+      cfpCertificationId: string;
       /**
        * Format: uuid
        * @description トレース識別子
        * @example 2680ed32-19a3-435b-a094-23ff43aaa611
        */
-      traceId?: string;
+      traceId: string;
       /**
        * @description CFP証明書説明
        * @example CFP証明書の説明が入ります
        */
-      cfpCertificationDescription?: string | null;
-      cfpCertificationFileInfo?: (({
+      cfpCertificationDescription: string | null;
+      /** @description CFP証明書ファイル情報 */
+      cfpCertificationFileInfo: (({
           /**
            * Format: uuid
            * @description 事業者識別子（内部）
