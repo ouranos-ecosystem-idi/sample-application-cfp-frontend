@@ -4,12 +4,15 @@ export const MAX_CHILD_PARTS_NUM = 50;
 // 証明書：コメント最大文字数
 export const MAX_CERT_COMMENT_NUM = 100;
 // 証明書：アップロード可能な合計ファイルサイズ
-export const UPLOAD_MAX_CERT_FILESIZE = 6.6 * 1024 * 1024; // 6.6MB
+export const UPLOAD_MAX_CERT_FILESIZE = 100 * 1024 * 1024; // 100MB
 // 証明書：アップロード可能な合計ファイル数
-export const UPLOAD_MAX_CERT_FILE_NUM = 10;
+export const UPLOAD_MAX_CERT_FILE_NUM = 100;
+// 証明書：アップロード可能なファイル名の文字数
+export const UPLOAD_MAX_CERT_FILE_NAME_NUM = 100;
 // 証明書：アップロード可能な拡張子
 export const ACCEPTED_UPLOAD_CERT_FILE_EXT = [
   '.txt',
+  '.csv',
   '.pdf',
   '.doc',
   '.docx',
@@ -20,17 +23,16 @@ export const ACCEPTED_UPLOAD_CERT_FILE_EXT = [
   '.xls',
   '.xlsx',
   '.ods',
-  '.csv',
   '.jpeg',
   '.jpg',
+  '.bmp',
+  '.gif',
   '.png',
   '.zip',
-  '.gif',
-  '.bmp',
 ];
 
+// 親部品一覧（部品構成一覧・部品紐付け画面）で表示する部品数
 export const PARTS_NUM = 100;
-export const PARTS_ALL = 1000;
 
 export const sheetCsvHeaders = [
   '部品項目',

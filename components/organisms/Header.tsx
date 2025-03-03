@@ -56,7 +56,7 @@ export default function Header({ contentsWidth }: Props) {
                 <div className='mr-1 font-normal text-default-text'>
                   アカウント
                 </div>
-                <UserCircle size={32} className='fill-primary' />
+                <UserCircle size={24} className='fill-primary' />
               </div>
             </div>
             <ul

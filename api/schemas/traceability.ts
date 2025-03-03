@@ -49,20 +49,24 @@ export interface paths {
   };
   "/cfpCertifications": {
     /**
-     * 【CFP証明書登録API】自社の部品に対してCFP証明書情報を登録する
-     * @description 自社の部品に対してCFP証明書情報を登録する。
+     * 【CFP証明書削除API】自社に登録済みのCFP証明書情報を削除する。
+     * @description 【v3.0.0　追加API】
      *
-     * CFP証明書識別子が指定されている場合は、そのCFP証明書情報をリクエストの内容で更新する。
+     * 設定されたトレース識別子、ファイル識別子のCFP証明書情報、証明書ファイルを削除する。
      *
-     * ファイル登録時にファイル拡張子・MIMEタイプチェックを実施する。
+     * fileIdを指定の場合は該当するファイルを削除する。
+     * traceIdを指定の場合はtraceIdに紐づいているファイルをすべて削除する。
      *
-     * 設定可能な拡張子形式は以下の通り。
      *
-     * txt, csv, pdf, doc, docx, odt, ppt, pptx, odp, xls, xlsx, ods, csv, jpeg, jpg, bmp, gif, png, zip
+     * [削除する関連データ]
+     * * CFP証明書情報
+     * * 証明書ファイル
      *
-     * ※識別子の発行は同期処理のため即時発行となりますが、データ登録自体は非同期処理となるため、即時登録ではありません。
+     * ※データ削除自体は非同期処理となるため、即時処理ではありません。
+     *
+     * ※fileId指定の場合でも、削除後のファイル数が0件となる場合はCFP証明書情報も合わせて削除されます。
      */
-    post: operations["registCfpCertification"];
+    delete: operations["deleteCfpCertifications"];
   };
   "/cfpCertificationAcl": {
     /**
@@ -117,23 +121,118 @@ export interface paths {
      * CFP_RESPONSED → CFP/DQR回答
      *
      * CFP_UPDATED → CFP/DQR回答変更
+     *
+     * REPLY_MESSAGE_REGISTERED → 応答メッセージ登録 【v3.0.0 追加】
      */
     get: operations["findNotifications"];
   };
-  "/cfpCertificationFiles": {
+  "/requestStatus": {
     /**
-     * 【CFP証明書ファイルダウンロードAPI】CFP証明書ファイルのファイル情報（事業者識別子（内部）、ファイル識別子）をもとに、対象のファイルをダウンロードする。
-     * @description CFP証明書ファイルのファイル情報（事業者識別子（内部）、ファイル識別子）をもとに、対象のファイルをダウンロードする。
+     * 【リクエスト状況取得API】自社のリクエスト状況を取得する。
+     * @description 【v2.0.0　追加API】
      *
-     * ファイルはBase64方式で変換されたバイナリデータとして返却される。
+     * [Queryパラメータの指定]
      *
-     * ※値の前後に「"」は付加しません。
+     * operatorId: (uuid) trackId: (list(uuid))
      *
-     * エンコードにはJavaのBase64クラスのgetUrlEncoderメソッドを使用しています。
+     * [詳細説明]
      *
-     * デコードにはBase64クラスのgetUrlDecoderメソッドを推奨します。
+     * 設定されたX-Trackから、自社のリクエスト状況を取得する。
+     *
+     * 取得されたリクエスト状況リストはX-Trackの昇順で応答する。
+     * 入力条件のX-Trackの内、リクエスト状況が取得できなかったものは、応答のリクエスト状況リストに含まれない。
+     * 入力条件を満たすリクエスト状況が存在しなかった場合は、空のリクエスト状況リストを正常応答する。
+     *
+     * 対象となるAPIは、HTTP GET以外のメソッドを使用しているAPI。ただし、APIの応答が正常終了している場合に限る。
+     * ・データ流通システムが提供する全てのPUT API/DELETE API
+     * ・トレーサビリティ管理システムが提供する全てのPOST API/DELETE API
+     *
+     * ・要素の説明
+     *
+     * requestStatus:リクエストの状況を識別
+     *
+     * SUCCESS → 正常終了
+     * ERROR → 異常終了
+     * PROCESSING → データ更新中
      */
-    get: operations["downloadCfpCertificationFile"];
+    get: operations["getRequestStatus"];
+  };
+  "/replyMessages": {
+    /**
+     * 【応答メッセージ登録API】自社が受領した依頼情報に対して、応答メッセージを登録または更新する。
+     * @description 【v3.0.0　追加API】
+     *
+     * [詳細説明]
+     *
+     * 自社が受領した依頼情報に対して、応答メッセージを登録または更新する。
+     *
+     * リクエストの応答メッセージが空文字・null・未指定のいずれかの場合、依頼情報の応答メッセージをnullで更新する。
+     *
+     * ※データ登録自体は非同期処理となるため、即時登録ではありません。
+     */
+    post: operations["registReplyMessage"];
+  };
+  "/fileDownloadUrl": {
+    /**
+     * 【ファイルダウンロード用URL取得API】CFP証明書ファイルのファイル情報(事業者識別子(内部)、ファイル識別子)をもとに、ファイルをダウンロードする際に使用するURLを取得する。
+     * @description 【v3.0.0　追加API】
+     *
+     * CFP証明書ファイルのファイル情報（事業者識別子（内部）、ファイル識別子）をもとに、対象のファイルダウンロード用URLを取得する。
+     *
+     * ファイルダウンロードを行う場合、下記手順にて実施すること。
+     *
+     * １．本APIにてダウンロード対象のファイル情報を設定し、ダウンロード用URLを取得
+     *
+     * ２．HTTPメソッド「GET」を指定して取得したダウンロード用URLを実行し、ファイルダウンロード
+     *
+     * ※手順２のファイルダウンロード時、レスポンスヘッダにファイル名情報が設定されます
+     */
+    get: operations["getFileDownloadUrl"];
+  };
+  "/fileUploadUrl": {
+    /**
+     * 【ファイルアップロード用URL取得API】ファイルをアップロードする際に使用するURLを取得する。
+     * @description 【v3.0.0　追加API】
+     *
+     * 事業者識別子（内部）とファイル情報をもとに、ファイルをアップロードする際に使用するURLを取得する。
+     *
+     *
+     * 設定可能な拡張子形式は以下の通り。(アルファベット大文字・小文字・大文字小文字混在の拡張子をすべて許容)
+     *
+     * txt, csv, pdf, doc, docx, odt, ppt, pptx, odp, xls, xlsx, ods, csv, jpeg, jpg, bmp, gif, png, zip
+     *
+     * CFP証明書を登録する場合、下記手順にて実施すること。
+     *
+     * １．本APIにてアップロード対象のファイル情報を設定し、アップロード用URLを取得する
+     *
+     * ２．URLに対応するファイルならびにHTTPメソッド「PUT」を指定して取得したアップロード用URLを実行し、ファイルアップロード
+     *
+     * ３．CFP証明書情報登録APIのリクエストパラメータとして、アップロード済のファイル情報を指定してAPI実行
+     *
+     * ※セキュリティリスクのあるファイルをアップロードした場合にエラーが発生する場合があります。
+     *
+     * （例. macOS にてZIPファイルを作成した際に生成されるファイルで、クロスサイトスクリプティングのリスクを伴う場合。）
+     */
+    post: operations["getFileUploadUrl"];
+  };
+  "/cfpCertificationInfo": {
+    /**
+     * 【CFP証明書情報登録API】自社の部品に対してCFP証明書情報を登録する
+     * @description 【v3.0.0  追加API】
+     *
+     * 自社の部品に対してCFP証明書情報を登録する。
+     *
+     * CFP証明書識別子が指定されている場合は、そのCFP証明書情報をリクエストの内容で更新する。
+     *
+     * 本APIを実行する前に、必ず登録対象ファイルのファイルアップロードが完了していること。
+     *
+     * 設定可能な拡張子形式は以下の通り。(アルファベット大文字・小文字・大文字小文字混在の拡張子をすべて許容)
+     *
+     * txt, csv, pdf, doc, docx, odt, ppt, pptx, odp, xls, xlsx, ods, csv, jpeg, jpg, bmp, gif, png, zip
+     *
+     * ※識別子の発行は同期処理のため即時発行となりますが、データ登録自体は非同期処理となるため、即時登録ではありません。
+     */
+    post: operations["registCfpCertificationInfo"];
   };
 }
 
@@ -141,90 +240,24 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    CfpCertificationsPostRequest: {
+    CfpCertificationFileInformation: {
       /**
        * Format: uuid
-       * @description 実行者の事業者識別子（内部）
+       * @description 事業者識別子（内部）
        * @example b1234567-1234-1234-1234-123456789012
        */
       operatorId: string;
       /**
        * Format: uuid
-       * @description CFP証明書識別子
-       * @example 7e785ae2-e628-42dc-90af-96f91958edc7
-       */
-      cfpCertificationId?: string;
-      /**
-       * Format: uuid
-       * @description トレース識別子
-       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-       */
-      traceId: string;
-      /**
-       * @description CFP証明書説明
-       * @example CFP証明書説明サンプル。
-       */
-      cfpCertificationDescription?: string;
-      /**
-       * @description CFP証明書ファイルリスト
-       *
-       * CFP証明書ファイルを設定する
-       *
-       * 最大10件まで登録可能
-       */
-      cfpCertificationFiles: string[];
-    };
-    CfpCertificationsPostResource: {
-      /**
-       * Format: uuid
-       * @description CFP証明書識別子
-       * @example 7e785ae2-e628-42dc-90af-96f91958edc7
-       */
-      cfpCertificationId?: string;
-      /**
-       * Format: uuid
-       * @description トレース識別子
-       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-       */
-      traceId?: string;
-      cfpCertificationFileInfo?: {
-          /**
-           * Format: uuid
-           * @description 事業者識別子（内部）
-           * @example a1234567-1234-1234-1234-123456789012
-           */
-          operatorId?: string;
-          /**
-           * Format: uuid
-           * @description ファイル識別子
-           * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
-           */
-          fileId?: string;
-          /**
-           * @description ファイル名称
-           * @example filename.pdf
-           */
-          fileName?: string;
-        }[];
-    };
-    CfpCertificationFileInformation: {
-      /**
-       * Format: uuid
-       * @description 事業者識別子（内部）
-       * @example a1234567-1234-1234-1234-123456789012
-       */
-      operatorId?: string;
-      /**
-       * Format: uuid
        * @description ファイル識別子
        * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
        */
-      fileId?: string;
+      fileId: string;
       /**
        * @description ファイル名称
        * @example filename.pdf
        */
-      fileName?: string;
+      fileName: string;
     };
     CfpCertificationAclPostRequest: {
       /**
@@ -257,67 +290,67 @@ export interface components {
        * @description トレース識別子
        * @example 2680ed32-19a3-435b-a094-23ff43aaa611
        */
-      traceId?: string;
+      traceId: string;
     };
     CfpCertificationAclGetResource: {
+      /**
+       * @description 開示元事業者識別子（内部）
+       * @example b1234567-1234-1234-1234-123456789012
+       */
+      releasedFromOperatorId: string;
+      /**
+       * @description 開示先事業者識別子（内部）
+       * @example a1234567-1234-1234-1234-123456789012
+       */
+      releasedToOperatorId: string;
+      /**
+       * Format: uuid
+       * @description トレース識別子
+       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+       */
+      traceId: string;
+      /**
+       * @description 開示フラグ
+       * * true : 開示状態
+       * * false: 非開示状態
+       */
+      releasedFlag: boolean;
+    }[];
+    CfpAclGetResource: ({
+      /**
+       * @description 開示元事業者識別子（内部）
+       * @example b1234567-1234-1234-1234-123456789012
+       */
+      releasedFromOperatorId: string;
+      /**
+       * @description 開示先事業者識別子（内部）
+       * @example a1234567-1234-1234-1234-123456789012
+       */
+      releasedToOperatorId: string;
+      /**
+       * Format: uuid
+       * @description トレース識別子
+       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+       */
+      traceId: string;
+      acl: ({
         /**
-         * @description 開示元事業者識別子（内部）
-         * @example b1234567-1234-1234-1234-123456789012
+         * @description 開示項目グループ
+         * * TOTALCFP : 合計CFP情報
+         * * TOTALDQR : 合計DQR情報
+         *
+         * @example TOTALCFP
+         * @enum {string}
          */
-        releasedFromOperatorId?: string;
-        /**
-         * @description 開示先事業者識別子（内部）
-         * @example a1234567-1234-1234-1234-123456789012
-         */
-        releasedToOperatorId?: string;
-        /**
-         * Format: uuid
-         * @description トレース識別子
-         * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-         */
-        traceId?: string;
+        aclItemGroup: "TOTALCFP" | "TOTALDQR";
         /**
          * @description 開示フラグ
          * * true : 開示状態
          * * false: 非開示状態
          */
-        releasedFlag?: boolean;
-      }[];
-    CfpAclGetResource: ({
-        /**
-         * @description 開示元事業者識別子（内部）
-         * @example b1234567-1234-1234-1234-123456789012
-         */
-        releasedFromOperatorId?: string;
-        /**
-         * @description 開示先事業者識別子（内部）
-         * @example a1234567-1234-1234-1234-123456789012
-         */
-        releasedToOperatorId?: string;
-        /**
-         * Format: uuid
-         * @description トレース識別子
-         * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-         */
-        traceId?: string;
-        acl?: ({
-            /**
-             * @description 開示項目グループ
-             * * TOTALCFP : 合計CFP情報
-             * * TOTALDQR : 合計DQR情報
-             *
-             * @example TOTALCFP
-             * @enum {string}
-             */
-            aclItemGroup?: "TOTALCFP" | "TOTALDQR";
-            /**
-             * @description 開示フラグ
-             * * true : 開示状態
-             * * false: 非開示状態
-             */
-            releasedFlag?: boolean;
-          })[];
+        releasedFlag: boolean;
       })[];
+    })[];
     CfpAclPostRequest: {
       /**
        * Format: uuid
@@ -338,22 +371,22 @@ export interface components {
       traceId: string;
       /** @description 開示設定リスト */
       acl: ({
-          /**
-           * @description 開示項目グループ
-           * * TOTALCFP : 合計CFP情報
-           * * TOTALDQR : 合計DQR情報
-           *
-           * @example TOTALCFP
-           * @enum {string}
-           */
-          aclItemGroup: "TOTALCFP" | "TOTALDQR";
-          /**
-           * @description 開示フラグ
-           * * true : 開示状態
-           * * false: 非開示状態
-           */
-          releasedFlag: boolean;
-        })[];
+        /**
+         * @description 開示項目グループ
+         * * TOTALCFP : 合計CFP情報
+         * * TOTALDQR : 合計DQR情報
+         *
+         * @example TOTALCFP
+         * @enum {string}
+         */
+        aclItemGroup: "TOTALCFP" | "TOTALDQR";
+        /**
+         * @description 開示フラグ
+         * * true : 開示状態
+         * * false: 非開示状態
+         */
+        releasedFlag: boolean;
+      })[];
     };
     CfpAclPostResource: {
       /**
@@ -361,80 +394,84 @@ export interface components {
        * @description トレース識別子
        * @example 2680ed32-19a3-435b-a094-23ff43aaa611
        */
-      traceId?: string;
+      traceId: string;
     };
     NotificationGetResource: {
-      notifications?: ({
+      notifications: ({
+        /**
+         * Format: uuid
+         * @description 通知識別子
+         * @example 0c3e56cd-eaf6-4b53-8561-4d9c02038e25
+         */
+        notificationId: string;
+        /**
+         * @description 通知種別コード
+         * * REQUEST_NEW - 依頼登録
+         * * REQUEST_CANCELED - 依頼取消
+         * * REQUEST_REJECTED - 依頼差戻
+         * * CFP_RESPONSED - CFP/DQR回答
+         * * CFP_UPDATED - CFP/DQR回答変更
+         * * REPLY_MESSAGE_REGISTERED - 応答メッセージ登録 【v3.0.0 追加】
+         *
+         * @example REQUEST_NEW
+         * @enum {string}
+         */
+        notificationType: "REQUEST_NEW" | "REQUEST_CANCELED" | "REQUEST_REJECTED" | "CFP_RESPONSED" | "CFP_UPDATED" | "REPLY_MESSAGE_REGISTERED";
+        /**
+         * Format: uuid
+         * @description 通知元事業者識別子（内部）
+         * @example dc04b0ba-39c5-46b7-8bec-ef8ae420195d
+         */
+        notifiedFromOperatorId: string;
+        /** @description 通知取引関係情報 */
+        tradeRelation: {
           /**
            * Format: uuid
-           * @description 通知識別子
-           * @example 0c3e56cd-eaf6-4b53-8561-4d9c02038e25
+           * @description 取引関係識別子
+           * @example a84012cc-73fb-4f9b-9130-59ae546f7092
            */
-          notificationId?: string;
+          tradeId: string;
           /**
-           * @description 通知種別コード
-           * * REQUEST_NEW - 依頼登録
-           * * REQUEST_CANCELED - 依頼取消
-           * * REQUEST_REJECTED - 依頼差戻
-           * * CFP_RESPONSED - CFP/DQR回答
-           * * CFP_UPDATED - CFP/DQR回答変更
+           * Format: uuid
+           * @description 依頼識別子
            *
-           * @example REQUEST_NEW
-           * @enum {string}
+           * ※データ流通システム「statusId」項目に対応
+           *
+           * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
            */
-          notificationType?: "REQUEST_NEW" | "REQUEST_CANCELED" | "REQUEST_REJECTED" | "CFP_RESPONSED" | "CFP_UPDATED";
+          requestId: string;
           /**
            * Format: uuid
-           * @description 通知元事業者識別子（内部）
-           * @example dc04b0ba-39c5-46b7-8bec-ef8ae420195d
+           * @description 納品先事業者識別子（内部）
+           * @example a1234567-1234-1234-1234-123456789012
            */
-          notifiedFromOperatorId?: string;
-          /** @description 通知取引関係情報 */
-          tradeRelation?: {
-            /**
-             * Format: uuid
-             * @description 取引関係識別子
-             * @example a84012cc-73fb-4f9b-9130-59ae546f7092
-             */
-            tradeId?: string;
-            /**
-             * Format: uuid
-             * @description 依頼識別子
-             * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
-             */
-            requestId?: string;
-            /**
-             * Format: uuid
-             * @description 納品先事業者識別子（内部）
-             * @example a1234567-1234-1234-1234-123456789012
-             */
-            downstreamOperatorId?: string;
-            /**
-             * Format: uuid
-             * @description 仕入先事業者識別子（内部）
-             * @example b1234567-1234-1234-1234-123456789012
-             */
-            upstreamOperatorId?: string;
-            /**
-             * Format: uuid
-             * @description 納品先トレース識別子
-             * @example 7f95106f-d16f-4284-bdc4-c0f061135440
-             */
-            downstreamTraceId?: string;
-            /**
-             * Format: uuid
-             * @description 仕入先トレース識別子
-             * @example fddd1a04-b217-4413-af36-6f425d219226
-             */
-            upstreamTraceId?: string;
-          };
+          downstreamOperatorId: string;
           /**
-           * Format: date-time
-           * @description 通知日時
-           * @example 2024-12-31T12:34:56Z
+           * Format: uuid
+           * @description 仕入先事業者識別子（内部）
+           * @example b1234567-1234-1234-1234-123456789012
            */
-          notifiedAt?: string;
-        })[];
+          upstreamOperatorId: string;
+          /**
+           * Format: uuid
+           * @description 納品先トレース識別子
+           * @example 7f95106f-d16f-4284-bdc4-c0f061135440
+           */
+          downstreamTraceId: string;
+          /**
+           * Format: uuid
+           * @description 仕入先トレース識別子
+           * @example fddd1a04-b217-4413-af36-6f425d219226
+           */
+          upstreamTraceId?: string;
+        };
+        /**
+         * Format: date-time
+         * @description 通知日時
+         * @example 2024-12-31T12:34:56Z
+         */
+        notifiedAt: string;
+      })[];
       /**
        * @description 次データがある場合に取得開始位置の識別子を設定する
        *
@@ -448,7 +485,7 @@ export interface components {
        * @description 通知識別子
        * @example 0c3e56cd-eaf6-4b53-8561-4d9c02038e25
        */
-      notificationId?: string;
+      notificationId: string;
       /**
        * @description 通知種別コード
        * * REQUEST_NEW - 依頼登録
@@ -456,49 +493,53 @@ export interface components {
        * * REQUEST_REJECTED - 依頼差戻
        * * CFP_RESPONSED - CFP/DQR回答
        * * CFP_UPDATED - CFP/DQR回答変更
+       * * REPLY_MESSAGE_REGISTERED - 応答メッセージ登録 【v3.0.0 追加】
        *
        * @example REQUEST_NEW
        * @enum {string}
        */
-      notificationType?: "REQUEST_NEW" | "REQUEST_CANCELED" | "REQUEST_REJECTED" | "CFP_RESPONSED" | "CFP_UPDATED";
+      notificationType: "REQUEST_NEW" | "REQUEST_CANCELED" | "REQUEST_REJECTED" | "CFP_RESPONSED" | "CFP_UPDATED" | "REPLY_MESSAGE_REGISTERED";
       /**
        * Format: uuid
        * @description 通知元事業者識別子（内部）
        * @example dc04b0ba-39c5-46b7-8bec-ef8ae420195d
        */
-      notifiedFromOperatorId?: string;
+      notifiedFromOperatorId: string;
       /** @description 通知取引関係情報 */
-      tradeRelation?: {
+      tradeRelation: {
         /**
          * Format: uuid
          * @description 取引関係識別子
          * @example a84012cc-73fb-4f9b-9130-59ae546f7092
          */
-        tradeId?: string;
+        tradeId: string;
         /**
          * Format: uuid
          * @description 依頼識別子
+         *
+         * ※データ流通システム「statusId」項目に対応
+         *
          * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
          */
-        requestId?: string;
+        requestId: string;
         /**
          * Format: uuid
          * @description 納品先事業者識別子（内部）
          * @example a1234567-1234-1234-1234-123456789012
          */
-        downstreamOperatorId?: string;
+        downstreamOperatorId: string;
         /**
          * Format: uuid
          * @description 仕入先事業者識別子（内部）
          * @example b1234567-1234-1234-1234-123456789012
          */
-        upstreamOperatorId?: string;
+        upstreamOperatorId: string;
         /**
          * Format: uuid
          * @description 納品先トレース識別子
          * @example 7f95106f-d16f-4284-bdc4-c0f061135440
          */
-        downstreamTraceId?: string;
+        downstreamTraceId: string;
         /**
          * Format: uuid
          * @description 仕入先トレース識別子
@@ -511,7 +552,7 @@ export interface components {
        * @description 通知日時
        * @example 2024-12-31T12:34:56Z
        */
-      notifiedAt?: string;
+      notifiedAt: string;
     };
     /** @description 通知取引関係情報 */
     NotificationGetResourceItemTradeRelation: {
@@ -520,31 +561,34 @@ export interface components {
        * @description 取引関係識別子
        * @example a84012cc-73fb-4f9b-9130-59ae546f7092
        */
-      tradeId?: string;
+      tradeId: string;
       /**
        * Format: uuid
        * @description 依頼識別子
+       *
+       * ※データ流通システム「statusId」項目に対応
+       *
        * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
        */
-      requestId?: string;
+      requestId: string;
       /**
        * Format: uuid
        * @description 納品先事業者識別子（内部）
        * @example a1234567-1234-1234-1234-123456789012
        */
-      downstreamOperatorId?: string;
+      downstreamOperatorId: string;
       /**
        * Format: uuid
        * @description 仕入先事業者識別子（内部）
        * @example b1234567-1234-1234-1234-123456789012
        */
-      upstreamOperatorId?: string;
+      upstreamOperatorId: string;
       /**
        * Format: uuid
        * @description 納品先トレース識別子
        * @example 7f95106f-d16f-4284-bdc4-c0f061135440
        */
-      downstreamTraceId?: string;
+      downstreamTraceId: string;
       /**
        * Format: uuid
        * @description 仕入先トレース識別子
@@ -560,9 +604,227 @@ export interface components {
     ValidationError: {
       /** @description 1件以上のエラー詳細情報を表す */
       errors: {
-          errorCode: string;
-          errorDescription: string;
-        }[];
+        errorCode: string;
+        errorDescription: string;
+      }[];
+    };
+    RequestStatusGetResource: ({
+      /**
+       * Format: uuid
+       * @description X-Track
+       * @example 90f2cb728f14450f9e7d0013236fab0c
+       */
+      trackId: string;
+      /**
+       * Format: date-time
+       * @description リクエスト受付日時
+       * @example 2024-02-14T15:25:35Z
+       */
+      requestCreatedAt: string;
+      /**
+       * @description 受け付けられたリクエスト状況
+       *
+       * 最初に受け付けられたリクエスト処理の状況を設定する。
+       * * SUCCESS - 正常終了
+       * * ERROR - 異常終了
+       * * PROCESSING - データ更新中
+       *
+       * @example PROCESSING
+       * @enum {string}
+       */
+      acceptedRequestStatus: "SUCCESS" | "ERROR" | "PROCESSING";
+      /**
+       * @description サマリーリクエスト状況
+       *
+       * 後続の一連処理を含めた、同一X-Trackに対するリクエスト処理の状況をサマリーし設定する。
+       * * SUCCESS - 正常終了。全てのリクエスト処理の状況がSUCCESS
+       * * ERROR - 異常終了。一連処理の中に1件以上ERRORがある
+       * * PROCESSING - データ更新中。一連処理の中に1件以上PROCESSINGがあり、ERRORがない
+       *
+       * @example PROCESSING
+       * @enum {string}
+       */
+      summaryRequestStatus: "SUCCESS" | "ERROR" | "PROCESSING";
+    })[];
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    ReplyMessagesPostRequest: {
+      /**
+       * Format: uuid
+       * @description 実行者の事業者識別子（内部）
+       * @example b1234567-1234-1234-1234-123456789012
+       */
+      operatorId: string;
+      /**
+       * Format: uuid
+       * @description 依頼識別子
+       * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
+       */
+      requestId: string;
+      /**
+       * @description 応答メッセージ
+       * @example 応答メッセージ。
+       */
+      replyMessage?: string;
+    };
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    ReplyMessagesPostResource: {
+      /**
+       * Format: uuid
+       * @description 依頼識別子
+       * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
+       */
+      requestId: string;
+    };
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    CfpCertificationsDeleteResource: {
+      /**
+       * Format: uuid
+       * @description トレース識別子
+       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+       */
+      traceId: string;
+      /**
+       * Format: uuid
+       * @description ファイル識別子
+       * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+       */
+      fileId?: string;
+    };
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    FileDownloadUrlGetResource: {
+      /**
+       * Format: uuid
+       * @description ファイル識別子
+       * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+       */
+      fileId: string;
+      /**
+       * @description ファイル名称
+       * @example filename.pdf
+       */
+      fileName: string;
+      /**
+       * @description ファイルダウンロード用URL
+       * @example https://...
+       */
+      URL: string;
+    };
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    FileUploadUrlPostRequest: {
+      /**
+       * Format: uuid
+       * @description 実行者の事業者識別子（内部）
+       * @example b1234567-1234-1234-1234-123456789012
+       */
+      operatorId: string;
+      /** @description ファイル情報リスト */
+      fileInfo: ({
+        /**
+         * @description ファイル名称
+         * @example filename.pdf
+         */
+        fileName: string;
+        /**
+         * @description 拡張子
+         * @example pdf
+         * @enum {string}
+         */
+        extension: "txt" | "csv" | "pdf" | "doc" | "docx" | "odt" | "ppt" | "pptx" | "odp" | "xls" | "xlsx" | "ods" | "jpeg" | "jpg" | "bmp" | "gif" | "png" | "zip";
+      })[];
+    };
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    FileUploadUrlPostResource: {
+      /**
+       * Format: uuid
+       * @description ファイル識別子
+       * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+       */
+      fileId: string;
+      /**
+       * @description ファイル名称
+       * @example filename.pdf
+       */
+      fileName: string;
+      /**
+       * @description ファイルアップロード用URL
+       * @example https://...
+       */
+      URL: string;
+    }[];
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    CfpCertificationInfoPostRequest: {
+      /**
+       * Format: uuid
+       * @description 実行者の事業者識別子（内部）
+       * @example b1234567-1234-1234-1234-123456789012
+       */
+      operatorId: string;
+      /**
+       * Format: uuid
+       * @description CFP証明書識別子
+       * @example 7e785ae2-e628-42dc-90af-96f91958edc7
+       */
+      cfpCertificationId?: string;
+      /**
+       * Format: uuid
+       * @description トレース識別子
+       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+       */
+      traceId: string;
+      /**
+       * @description CFP証明書説明
+       * @example CFP証明書説明サンプル。
+       */
+      cfpCertificationDescription?: string;
+      /** @description CFP証明書ファイル情報リスト */
+      cfpCertificationFileInfo: {
+        /**
+         * Format: uuid
+         * @description ファイル識別子
+         * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+         */
+        fileId: string;
+        /**
+         * @description ファイル名称
+         * @example filename.pdf
+         */
+        fileName: string;
+      }[];
+    };
+    /** @description 【v3.0.0 追加オブジェクト】 */
+    CfpCertificationInfoPostResource: {
+      /**
+       * Format: uuid
+       * @description CFP証明書識別子
+       * @example 7e785ae2-e628-42dc-90af-96f91958edc7
+       */
+      cfpCertificationId: string;
+      /**
+       * Format: uuid
+       * @description トレース識別子
+       * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+       */
+      traceId: string;
+      /** @description CFP証明書ファイル情報リスト */
+      cfpCertificationFileInfo: {
+        /**
+         * Format: uuid
+         * @description 事業者識別子（内部）
+         * @example b1234567-1234-1234-1234-123456789012
+         */
+        operatorId: string;
+        /**
+         * Format: uuid
+         * @description ファイル識別子
+         * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+         */
+        fileId: string;
+        /**
+         * @description ファイル名称
+         * @example filename.pdf
+         */
+        fileName: string;
+      }[];
     };
   };
   responses: {
@@ -575,9 +837,9 @@ export interface components {
       content: {
         "application/json": {
           errors?: {
-              errorCode: string;
-              errorDescription: string;
-            }[];
+            errorCode: string;
+            errorDescription: string;
+          }[];
         };
       };
     };
@@ -591,6 +853,8 @@ export interface components {
     traceId?: string;
     /** @description 検索対象のトレース識別子 */
     traceIdRequired: string;
+    /** @description 削除対象のトレース識別子 */
+    traceIdForDelete: string;
     /**
      * @description 検索対象のトレース識別子（複数件設定可能。最大50件）
      *
@@ -603,6 +867,12 @@ export interface components {
      * 各要素は `,` で区切って設定する
      */
     traceIdListRequired: string[];
+    /**
+     * @description 検索対象のX-Track（複数件設定可能。最大10件）
+     *
+     * 各要素は `,` で区切って設定する
+     */
+    trackIdListRequired: string[];
     /** @description 検索対象のCFP証明書識別子 */
     cfpCertificationId?: string;
     /** @description CFP証明書識別子(自社) or 取引関係識別子(他社) */
@@ -688,13 +958,21 @@ export interface components {
     downloadType: "OWN" | "OTHER";
     /**
      * @description ファイル識別子
-     * @example 4e9380a9-0b74-43a7-b60d-9d28731ef984
+     * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
      */
     fileId: string;
+    /** @description 削除対象のファイル識別子 */
+    fileIdForDelete?: string;
     /** @description 検索対象とする通知日時の開始日 */
     notifiedAtFrom?: string;
     /** @description 検索対象とする通知日時の終了日 */
     notifiedAtTo?: string;
+    /**
+     * @description 【v2.0.0　追加項目】
+     *
+     * 検索対象の依頼識別子
+     */
+    "requestId.v2.0.0"?: string;
   };
   requestBodies: never;
   headers: {
@@ -749,40 +1027,40 @@ export interface operations {
         };
         content: {
           "application/json": ({
+            /**
+             * @description 開示元事業者識別子（内部）
+             * @example b1234567-1234-1234-1234-123456789012
+             */
+            releasedFromOperatorId: string;
+            /**
+             * @description 開示先事業者識別子（内部）
+             * @example a1234567-1234-1234-1234-123456789012
+             */
+            releasedToOperatorId: string;
+            /**
+             * Format: uuid
+             * @description トレース識別子
+             * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+             */
+            traceId: string;
+            acl: ({
               /**
-               * @description 開示元事業者識別子（内部）
-               * @example b1234567-1234-1234-1234-123456789012
+               * @description 開示項目グループ
+               * * TOTALCFP : 合計CFP情報
+               * * TOTALDQR : 合計DQR情報
+               *
+               * @example TOTALCFP
+               * @enum {string}
                */
-              releasedFromOperatorId?: string;
+              aclItemGroup: "TOTALCFP" | "TOTALDQR";
               /**
-               * @description 開示先事業者識別子（内部）
-               * @example a1234567-1234-1234-1234-123456789012
+               * @description 開示フラグ
+               * * true : 開示状態
+               * * false: 非開示状態
                */
-              releasedToOperatorId?: string;
-              /**
-               * Format: uuid
-               * @description トレース識別子
-               * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-               */
-              traceId?: string;
-              acl?: ({
-                  /**
-                   * @description 開示項目グループ
-                   * * TOTALCFP : 合計CFP情報
-                   * * TOTALDQR : 合計DQR情報
-                   *
-                   * @example TOTALCFP
-                   * @enum {string}
-                   */
-                  aclItemGroup?: "TOTALCFP" | "TOTALDQR";
-                  /**
-                   * @description 開示フラグ
-                   * * true : 開示状態
-                   * * false: 非開示状態
-                   */
-                  releasedFlag?: boolean;
-                })[];
+              releasedFlag: boolean;
             })[];
+          })[];
         };
       };
       /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
@@ -795,9 +1073,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -810,9 +1088,9 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -859,22 +1137,22 @@ export interface operations {
           traceId: string;
           /** @description 開示設定リスト */
           acl: ({
-              /**
-               * @description 開示項目グループ
-               * * TOTALCFP : 合計CFP情報
-               * * TOTALDQR : 合計DQR情報
-               *
-               * @example TOTALCFP
-               * @enum {string}
-               */
-              aclItemGroup: "TOTALCFP" | "TOTALDQR";
-              /**
-               * @description 開示フラグ
-               * * true : 開示状態
-               * * false: 非開示状態
-               */
-              releasedFlag: boolean;
-            })[];
+            /**
+             * @description 開示項目グループ
+             * * TOTALCFP : 合計CFP情報
+             * * TOTALDQR : 合計DQR情報
+             *
+             * @example TOTALCFP
+             * @enum {string}
+             */
+            aclItemGroup: "TOTALCFP" | "TOTALDQR";
+            /**
+             * @description 開示フラグ
+             * * true : 開示状態
+             * * false: 非開示状態
+             */
+            releasedFlag: boolean;
+          })[];
         };
       };
     };
@@ -892,7 +1170,7 @@ export interface operations {
              * @description トレース識別子
              * @example 2680ed32-19a3-435b-a094-23ff43aaa611
              */
-            traceId?: string;
+            traceId: string;
           };
         };
       };
@@ -906,9 +1184,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -921,69 +1199,45 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
     };
   };
   /**
-   * 【CFP証明書登録API】自社の部品に対してCFP証明書情報を登録する
-   * @description 自社の部品に対してCFP証明書情報を登録する。
+   * 【CFP証明書削除API】自社に登録済みのCFP証明書情報を削除する。
+   * @description 【v3.0.0　追加API】
    *
-   * CFP証明書識別子が指定されている場合は、そのCFP証明書情報をリクエストの内容で更新する。
+   * 設定されたトレース識別子、ファイル識別子のCFP証明書情報、証明書ファイルを削除する。
    *
-   * ファイル登録時にファイル拡張子・MIMEタイプチェックを実施する。
+   * fileIdを指定の場合は該当するファイルを削除する。
+   * traceIdを指定の場合はtraceIdに紐づいているファイルをすべて削除する。
    *
-   * 設定可能な拡張子形式は以下の通り。
    *
-   * txt, csv, pdf, doc, docx, odt, ppt, pptx, odp, xls, xlsx, ods, csv, jpeg, jpg, bmp, gif, png, zip
+   * [削除する関連データ]
+   * * CFP証明書情報
+   * * 証明書ファイル
    *
-   * ※識別子の発行は同期処理のため即時発行となりますが、データ登録自体は非同期処理となるため、即時登録ではありません。
+   * ※データ削除自体は非同期処理となるため、即時処理ではありません。
+   *
+   * ※fileId指定の場合でも、削除後のファイル数が0件となる場合はCFP証明書情報も合わせて削除されます。
    */
-  registCfpCertification: {
-    /** @description 登録するCFP証明書情報 */
-    requestBody: {
-      content: {
-        "multipart/form-data": {
-          /**
-           * Format: uuid
-           * @description 実行者の事業者識別子（内部）
-           * @example b1234567-1234-1234-1234-123456789012
-           */
-          operatorId: string;
-          /**
-           * Format: uuid
-           * @description CFP証明書識別子
-           * @example 7e785ae2-e628-42dc-90af-96f91958edc7
-           */
-          cfpCertificationId?: string;
-          /**
-           * Format: uuid
-           * @description トレース識別子
-           * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-           */
-          traceId: string;
-          /**
-           * @description CFP証明書説明
-           * @example CFP証明書説明サンプル。
-           */
-          cfpCertificationDescription?: string;
-          /**
-           * @description CFP証明書ファイルリスト
-           *
-           * CFP証明書ファイルを設定する
-           *
-           * 最大10件まで登録可能
-           */
-          cfpCertificationFiles: string[];
-        };
+  deleteCfpCertifications: {
+    parameters: {
+      query: {
+        /** @description 実行者の事業者識別子（内部） */
+        operatorId: string;
+        /** @description 削除対象のトレース識別子 */
+        traceId: string;
+        /** @description 削除対象のファイル識別子 */
+        fileId?: string;
       };
     };
     responses: {
-      /** @description 登録したCFP証明書のCFP証明書識別子及びトレース識別子 */
+      /** @description 削除対象としたトレース識別子及びファイル識別子 */
       200: {
         headers: {
           /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
@@ -993,35 +1247,16 @@ export interface operations {
           "application/json": {
             /**
              * Format: uuid
-             * @description CFP証明書識別子
-             * @example 7e785ae2-e628-42dc-90af-96f91958edc7
-             */
-            cfpCertificationId?: string;
-            /**
-             * Format: uuid
              * @description トレース識別子
              * @example 2680ed32-19a3-435b-a094-23ff43aaa611
              */
-            traceId?: string;
-            cfpCertificationFileInfo?: {
-                /**
-                 * Format: uuid
-                 * @description 事業者識別子（内部）
-                 * @example a1234567-1234-1234-1234-123456789012
-                 */
-                operatorId?: string;
-                /**
-                 * Format: uuid
-                 * @description ファイル識別子
-                 * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
-                 */
-                fileId?: string;
-                /**
-                 * @description ファイル名称
-                 * @example filename.pdf
-                 */
-                fileName?: string;
-              }[];
+            traceId: string;
+            /**
+             * Format: uuid
+             * @description ファイル識別子
+             * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+             */
+            fileId?: string;
           };
         };
       };
@@ -1035,9 +1270,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1050,9 +1285,9 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1089,29 +1324,29 @@ export interface operations {
         };
         content: {
           "application/json": {
-              /**
-               * @description 開示元事業者識別子（内部）
-               * @example b1234567-1234-1234-1234-123456789012
-               */
-              releasedFromOperatorId?: string;
-              /**
-               * @description 開示先事業者識別子（内部）
-               * @example a1234567-1234-1234-1234-123456789012
-               */
-              releasedToOperatorId?: string;
-              /**
-               * Format: uuid
-               * @description トレース識別子
-               * @example 2680ed32-19a3-435b-a094-23ff43aaa611
-               */
-              traceId?: string;
-              /**
-               * @description 開示フラグ
-               * * true : 開示状態
-               * * false: 非開示状態
-               */
-              releasedFlag?: boolean;
-            }[];
+            /**
+             * @description 開示元事業者識別子（内部）
+             * @example b1234567-1234-1234-1234-123456789012
+             */
+            releasedFromOperatorId: string;
+            /**
+             * @description 開示先事業者識別子（内部）
+             * @example a1234567-1234-1234-1234-123456789012
+             */
+            releasedToOperatorId: string;
+            /**
+             * Format: uuid
+             * @description トレース識別子
+             * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+             */
+            traceId: string;
+            /**
+             * @description 開示フラグ
+             * * true : 開示状態
+             * * false: 非開示状態
+             */
+            releasedFlag: boolean;
+          }[];
         };
       };
       /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
@@ -1124,9 +1359,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1139,9 +1374,9 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1200,7 +1435,7 @@ export interface operations {
              * @description トレース識別子
              * @example 2680ed32-19a3-435b-a094-23ff43aaa611
              */
-            traceId?: string;
+            traceId: string;
           };
         };
       };
@@ -1214,9 +1449,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1229,9 +1464,9 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1264,6 +1499,8 @@ export interface operations {
    * CFP_RESPONSED → CFP/DQR回答
    *
    * CFP_UPDATED → CFP/DQR回答変更
+   *
+   * REPLY_MESSAGE_REGISTERED → 応答メッセージ登録 【v3.0.0 追加】
    */
   findNotifications: {
     parameters: {
@@ -1291,77 +1528,81 @@ export interface operations {
         };
         content: {
           "application/json": {
-            notifications?: ({
+            notifications: ({
+              /**
+               * Format: uuid
+               * @description 通知識別子
+               * @example 0c3e56cd-eaf6-4b53-8561-4d9c02038e25
+               */
+              notificationId: string;
+              /**
+               * @description 通知種別コード
+               * * REQUEST_NEW - 依頼登録
+               * * REQUEST_CANCELED - 依頼取消
+               * * REQUEST_REJECTED - 依頼差戻
+               * * CFP_RESPONSED - CFP/DQR回答
+               * * CFP_UPDATED - CFP/DQR回答変更
+               * * REPLY_MESSAGE_REGISTERED - 応答メッセージ登録 【v3.0.0 追加】
+               *
+               * @example REQUEST_NEW
+               * @enum {string}
+               */
+              notificationType: "REQUEST_NEW" | "REQUEST_CANCELED" | "REQUEST_REJECTED" | "CFP_RESPONSED" | "CFP_UPDATED" | "REPLY_MESSAGE_REGISTERED";
+              /**
+               * Format: uuid
+               * @description 通知元事業者識別子（内部）
+               * @example dc04b0ba-39c5-46b7-8bec-ef8ae420195d
+               */
+              notifiedFromOperatorId: string;
+              /** @description 通知取引関係情報 */
+              tradeRelation: {
                 /**
                  * Format: uuid
-                 * @description 通知識別子
-                 * @example 0c3e56cd-eaf6-4b53-8561-4d9c02038e25
+                 * @description 取引関係識別子
+                 * @example a84012cc-73fb-4f9b-9130-59ae546f7092
                  */
-                notificationId?: string;
+                tradeId: string;
                 /**
-                 * @description 通知種別コード
-                 * * REQUEST_NEW - 依頼登録
-                 * * REQUEST_CANCELED - 依頼取消
-                 * * REQUEST_REJECTED - 依頼差戻
-                 * * CFP_RESPONSED - CFP/DQR回答
-                 * * CFP_UPDATED - CFP/DQR回答変更
+                 * Format: uuid
+                 * @description 依頼識別子
                  *
-                 * @example REQUEST_NEW
-                 * @enum {string}
+                 * ※データ流通システム「statusId」項目に対応
+                 *
+                 * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
                  */
-                notificationType?: "REQUEST_NEW" | "REQUEST_CANCELED" | "REQUEST_REJECTED" | "CFP_RESPONSED" | "CFP_UPDATED";
+                requestId: string;
                 /**
                  * Format: uuid
-                 * @description 通知元事業者識別子（内部）
-                 * @example dc04b0ba-39c5-46b7-8bec-ef8ae420195d
+                 * @description 納品先事業者識別子（内部）
+                 * @example a1234567-1234-1234-1234-123456789012
                  */
-                notifiedFromOperatorId?: string;
-                /** @description 通知取引関係情報 */
-                tradeRelation?: {
-                  /**
-                   * Format: uuid
-                   * @description 取引関係識別子
-                   * @example a84012cc-73fb-4f9b-9130-59ae546f7092
-                   */
-                  tradeId?: string;
-                  /**
-                   * Format: uuid
-                   * @description 依頼識別子
-                   * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
-                   */
-                  requestId?: string;
-                  /**
-                   * Format: uuid
-                   * @description 納品先事業者識別子（内部）
-                   * @example a1234567-1234-1234-1234-123456789012
-                   */
-                  downstreamOperatorId?: string;
-                  /**
-                   * Format: uuid
-                   * @description 仕入先事業者識別子（内部）
-                   * @example b1234567-1234-1234-1234-123456789012
-                   */
-                  upstreamOperatorId?: string;
-                  /**
-                   * Format: uuid
-                   * @description 納品先トレース識別子
-                   * @example 7f95106f-d16f-4284-bdc4-c0f061135440
-                   */
-                  downstreamTraceId?: string;
-                  /**
-                   * Format: uuid
-                   * @description 仕入先トレース識別子
-                   * @example fddd1a04-b217-4413-af36-6f425d219226
-                   */
-                  upstreamTraceId?: string;
-                };
+                downstreamOperatorId: string;
                 /**
-                 * Format: date-time
-                 * @description 通知日時
-                 * @example 2024-12-31T12:34:56Z
+                 * Format: uuid
+                 * @description 仕入先事業者識別子（内部）
+                 * @example b1234567-1234-1234-1234-123456789012
                  */
-                notifiedAt?: string;
-              })[];
+                upstreamOperatorId: string;
+                /**
+                 * Format: uuid
+                 * @description 納品先トレース識別子
+                 * @example 7f95106f-d16f-4284-bdc4-c0f061135440
+                 */
+                downstreamTraceId: string;
+                /**
+                 * Format: uuid
+                 * @description 仕入先トレース識別子
+                 * @example fddd1a04-b217-4413-af36-6f425d219226
+                 */
+                upstreamTraceId?: string;
+              };
+              /**
+               * Format: date-time
+               * @description 通知日時
+               * @example 2024-12-31T12:34:56Z
+               */
+              notifiedAt: string;
+            })[];
             /**
              * @description 次データがある場合に取得開始位置の識別子を設定する
              *
@@ -1381,9 +1622,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1396,56 +1637,101 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
     };
   };
   /**
-   * 【CFP証明書ファイルダウンロードAPI】CFP証明書ファイルのファイル情報（事業者識別子（内部）、ファイル識別子）をもとに、対象のファイルをダウンロードする。
-   * @description CFP証明書ファイルのファイル情報（事業者識別子（内部）、ファイル識別子）をもとに、対象のファイルをダウンロードする。
+   * 【リクエスト状況取得API】自社のリクエスト状況を取得する。
+   * @description 【v2.0.0　追加API】
    *
-   * ファイルはBase64方式で変換されたバイナリデータとして返却される。
+   * [Queryパラメータの指定]
    *
-   * ※値の前後に「"」は付加しません。
+   * operatorId: (uuid) trackId: (list(uuid))
    *
-   * エンコードにはJavaのBase64クラスのgetUrlEncoderメソッドを使用しています。
+   * [詳細説明]
    *
-   * デコードにはBase64クラスのgetUrlDecoderメソッドを推奨します。
+   * 設定されたX-Trackから、自社のリクエスト状況を取得する。
+   *
+   * 取得されたリクエスト状況リストはX-Trackの昇順で応答する。
+   * 入力条件のX-Trackの内、リクエスト状況が取得できなかったものは、応答のリクエスト状況リストに含まれない。
+   * 入力条件を満たすリクエスト状況が存在しなかった場合は、空のリクエスト状況リストを正常応答する。
+   *
+   * 対象となるAPIは、HTTP GET以外のメソッドを使用しているAPI。ただし、APIの応答が正常終了している場合に限る。
+   * ・データ流通システムが提供する全てのPUT API/DELETE API
+   * ・トレーサビリティ管理システムが提供する全てのPOST API/DELETE API
+   *
+   * ・要素の説明
+   *
+   * requestStatus:リクエストの状況を識別
+   *
+   * SUCCESS → 正常終了
+   * ERROR → 異常終了
+   * PROCESSING → データ更新中
    */
-  downloadCfpCertificationFile: {
+  getRequestStatus: {
     parameters: {
       query: {
         /** @description 実行者の事業者識別子（内部） */
         operatorId: string;
-        /** @description ファイル事業者識別子（内部） */
-        fileOperatorId: string;
         /**
-         * @description ファイル識別子
-         * @example 4e9380a9-0b74-43a7-b60d-9d28731ef984
+         * @description 検索対象のX-Track（複数件設定可能。最大10件）
+         *
+         * 各要素は `,` で区切って設定する
          */
-        fileId: string;
-        /**
-         * @description ダウンロード情報種別
-         * @example OWN
-         */
-        downloadType: "OWN" | "OTHER";
-        /** @description CFP証明書識別子(自社) or 取引関係識別子(他社) */
-        cfpCertificationId: string;
+        trackId: string[];
       };
     };
     responses: {
-      /** @description Base64方式で変換されたバイナリデータ ※値の前後に「"」は付加しません */
+      /** @description 入力条件を満たすリクエスト状況リスト */
       200: {
         headers: {
           /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
           "X-Track"?: string;
         };
         content: {
-          "application/json": string;
+          "application/json": ({
+            /**
+             * Format: uuid
+             * @description X-Track
+             * @example 90f2cb728f14450f9e7d0013236fab0c
+             */
+            trackId: string;
+            /**
+             * Format: date-time
+             * @description リクエスト受付日時
+             * @example 2024-02-14T15:25:35Z
+             */
+            requestCreatedAt: string;
+            /**
+             * @description 受け付けられたリクエスト状況
+             *
+             * 最初に受け付けられたリクエスト処理の状況を設定する。
+             * * SUCCESS - 正常終了
+             * * ERROR - 異常終了
+             * * PROCESSING - データ更新中
+             *
+             * @example PROCESSING
+             * @enum {string}
+             */
+            acceptedRequestStatus: "SUCCESS" | "ERROR" | "PROCESSING";
+            /**
+             * @description サマリーリクエスト状況
+             *
+             * 後続の一連処理を含めた、同一X-Trackに対するリクエスト処理の状況をサマリーし設定する。
+             * * SUCCESS - 正常終了。全てのリクエスト処理の状況がSUCCESS
+             * * ERROR - 異常終了。一連処理の中に1件以上ERRORがある
+             * * PROCESSING - データ更新中。一連処理の中に1件以上PROCESSINGがあり、ERRORがない
+             *
+             * @example PROCESSING
+             * @enum {string}
+             */
+            summaryRequestStatus: "SUCCESS" | "ERROR" | "PROCESSING";
+          })[];
         };
       };
       /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
@@ -1458,9 +1744,9 @@ export interface operations {
           "application/json": {
             /** @description 1件以上のエラー詳細情報を表す */
             errors: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };
@@ -1473,9 +1759,443 @@ export interface operations {
         content: {
           "application/json": {
             errors?: {
-                errorCode: string;
-                errorDescription: string;
-              }[];
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  /**
+   * 【応答メッセージ登録API】自社が受領した依頼情報に対して、応答メッセージを登録または更新する。
+   * @description 【v3.0.0　追加API】
+   *
+   * [詳細説明]
+   *
+   * 自社が受領した依頼情報に対して、応答メッセージを登録または更新する。
+   *
+   * リクエストの応答メッセージが空文字・null・未指定のいずれかの場合、依頼情報の応答メッセージをnullで更新する。
+   *
+   * ※データ登録自体は非同期処理となるため、即時登録ではありません。
+   */
+  registReplyMessage: {
+    /** @description 登録する応答メッセージ */
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: uuid
+           * @description 実行者の事業者識別子（内部）
+           * @example b1234567-1234-1234-1234-123456789012
+           */
+          operatorId: string;
+          /**
+           * Format: uuid
+           * @description 依頼識別子
+           * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
+           */
+          requestId: string;
+          /**
+           * @description 応答メッセージ
+           * @example 応答メッセージ。
+           */
+          replyMessage?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 応答メッセージを登録した依頼情報 */
+      200: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description 依頼識別子
+             * @example c5280b5b-55b8-4ce0-a68e-6d8d5e2523cd
+             */
+            requestId: string;
+          };
+        };
+      };
+      /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
+      400: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /** @description 1件以上のエラー詳細情報を表す */
+            errors: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+      /** @description 想定外のエラー */
+      500: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            errors?: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  /**
+   * 【ファイルダウンロード用URL取得API】CFP証明書ファイルのファイル情報(事業者識別子(内部)、ファイル識別子)をもとに、ファイルをダウンロードする際に使用するURLを取得する。
+   * @description 【v3.0.0　追加API】
+   *
+   * CFP証明書ファイルのファイル情報（事業者識別子（内部）、ファイル識別子）をもとに、対象のファイルダウンロード用URLを取得する。
+   *
+   * ファイルダウンロードを行う場合、下記手順にて実施すること。
+   *
+   * １．本APIにてダウンロード対象のファイル情報を設定し、ダウンロード用URLを取得
+   *
+   * ２．HTTPメソッド「GET」を指定して取得したダウンロード用URLを実行し、ファイルダウンロード
+   *
+   * ※手順２のファイルダウンロード時、レスポンスヘッダにファイル名情報が設定されます
+   */
+  getFileDownloadUrl: {
+    parameters: {
+      query: {
+        /** @description 実行者の事業者識別子（内部） */
+        operatorId: string;
+        /** @description ファイル事業者識別子（内部） */
+        fileOperatorId: string;
+        /**
+         * @description ファイル識別子
+         * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+         */
+        fileId: string;
+        /**
+         * @description ダウンロード情報種別
+         * @example OWN
+         */
+        downloadType: "OWN" | "OTHER";
+        /** @description CFP証明書識別子(自社) or 取引関係識別子(他社) */
+        cfpCertificationId: string;
+      };
+    };
+    responses: {
+      /** @description ファイルダウンロード用URL */
+      200: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description ファイル識別子
+             * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+             */
+            fileId: string;
+            /**
+             * @description ファイル名称
+             * @example filename.pdf
+             */
+            fileName: string;
+            /**
+             * @description ファイルダウンロード用URL
+             * @example https://...
+             */
+            URL: string;
+          };
+        };
+      };
+      /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
+      400: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /** @description 1件以上のエラー詳細情報を表す */
+            errors: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+      /** @description 想定外のエラー */
+      500: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            errors?: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  /**
+   * 【ファイルアップロード用URL取得API】ファイルをアップロードする際に使用するURLを取得する。
+   * @description 【v3.0.0　追加API】
+   *
+   * 事業者識別子（内部）とファイル情報をもとに、ファイルをアップロードする際に使用するURLを取得する。
+   *
+   *
+   * 設定可能な拡張子形式は以下の通り。(アルファベット大文字・小文字・大文字小文字混在の拡張子をすべて許容)
+   *
+   * txt, csv, pdf, doc, docx, odt, ppt, pptx, odp, xls, xlsx, ods, csv, jpeg, jpg, bmp, gif, png, zip
+   *
+   * CFP証明書を登録する場合、下記手順にて実施すること。
+   *
+   * １．本APIにてアップロード対象のファイル情報を設定し、アップロード用URLを取得する
+   *
+   * ２．URLに対応するファイルならびにHTTPメソッド「PUT」を指定して取得したアップロード用URLを実行し、ファイルアップロード
+   *
+   * ３．CFP証明書情報登録APIのリクエストパラメータとして、アップロード済のファイル情報を指定してAPI実行
+   *
+   * ※セキュリティリスクのあるファイルをアップロードした場合にエラーが発生する場合があります。
+   *
+   * （例. macOS にてZIPファイルを作成した際に生成されるファイルで、クロスサイトスクリプティングのリスクを伴う場合。）
+   */
+  getFileUploadUrl: {
+    /** @description 実行者の事業者識別子（内部）とアップロード対象のファイル情報 */
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: uuid
+           * @description 実行者の事業者識別子（内部）
+           * @example b1234567-1234-1234-1234-123456789012
+           */
+          operatorId: string;
+          /** @description ファイル情報リスト */
+          fileInfo: ({
+            /**
+             * @description ファイル名称
+             * @example filename.pdf
+             */
+            fileName: string;
+            /**
+             * @description 拡張子
+             * @example pdf
+             * @enum {string}
+             */
+            extension: "txt" | "csv" | "pdf" | "doc" | "docx" | "odt" | "ppt" | "pptx" | "odp" | "xls" | "xlsx" | "ods" | "jpeg" | "jpg" | "bmp" | "gif" | "png" | "zip";
+          })[];
+        };
+      };
+    };
+    responses: {
+      /** @description ファイルアップロード用URL */
+      200: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description ファイル識別子
+             * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+             */
+            fileId: string;
+            /**
+             * @description ファイル名称
+             * @example filename.pdf
+             */
+            fileName: string;
+            /**
+             * @description ファイルアップロード用URL
+             * @example https://...
+             */
+            URL: string;
+          }[];
+        };
+      };
+      /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
+      400: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /** @description 1件以上のエラー詳細情報を表す */
+            errors: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+      /** @description 想定外のエラー */
+      500: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            errors?: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  /**
+   * 【CFP証明書情報登録API】自社の部品に対してCFP証明書情報を登録する
+   * @description 【v3.0.0  追加API】
+   *
+   * 自社の部品に対してCFP証明書情報を登録する。
+   *
+   * CFP証明書識別子が指定されている場合は、そのCFP証明書情報をリクエストの内容で更新する。
+   *
+   * 本APIを実行する前に、必ず登録対象ファイルのファイルアップロードが完了していること。
+   *
+   * 設定可能な拡張子形式は以下の通り。(アルファベット大文字・小文字・大文字小文字混在の拡張子をすべて許容)
+   *
+   * txt, csv, pdf, doc, docx, odt, ppt, pptx, odp, xls, xlsx, ods, csv, jpeg, jpg, bmp, gif, png, zip
+   *
+   * ※識別子の発行は同期処理のため即時発行となりますが、データ登録自体は非同期処理となるため、即時登録ではありません。
+   */
+  registCfpCertificationInfo: {
+    /** @description 登録するCFP証明書情報 */
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: uuid
+           * @description 実行者の事業者識別子（内部）
+           * @example b1234567-1234-1234-1234-123456789012
+           */
+          operatorId: string;
+          /**
+           * Format: uuid
+           * @description CFP証明書識別子
+           * @example 7e785ae2-e628-42dc-90af-96f91958edc7
+           */
+          cfpCertificationId?: string;
+          /**
+           * Format: uuid
+           * @description トレース識別子
+           * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+           */
+          traceId: string;
+          /**
+           * @description CFP証明書説明
+           * @example CFP証明書説明サンプル。
+           */
+          cfpCertificationDescription?: string;
+          /** @description CFP証明書ファイル情報リスト */
+          cfpCertificationFileInfo: {
+            /**
+             * Format: uuid
+             * @description ファイル識別子
+             * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+             */
+            fileId: string;
+            /**
+             * @description ファイル名称
+             * @example filename.pdf
+             */
+            fileName: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 登録したCFP証明書のCFP証明書識別子及びトレース識別子 */
+      200: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /**
+             * Format: uuid
+             * @description CFP証明書識別子
+             * @example 7e785ae2-e628-42dc-90af-96f91958edc7
+             */
+            cfpCertificationId: string;
+            /**
+             * Format: uuid
+             * @description トレース識別子
+             * @example 2680ed32-19a3-435b-a094-23ff43aaa611
+             */
+            traceId: string;
+            /** @description CFP証明書ファイル情報リスト */
+            cfpCertificationFileInfo: {
+              /**
+               * Format: uuid
+               * @description 事業者識別子（内部）
+               * @example b1234567-1234-1234-1234-123456789012
+               */
+              operatorId: string;
+              /**
+               * Format: uuid
+               * @description ファイル識別子
+               * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+               */
+              fileId: string;
+              /**
+               * @description ファイル名称
+               * @example filename.pdf
+               */
+              fileName: string;
+            }[];
+          };
+        };
+      };
+      /** @description HTTPステータスコードが2xx以外の場合、エラー内容詳細を表す */
+      400: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            /** @description 1件以上のエラー詳細情報を表す */
+            errors: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
+          };
+        };
+      };
+      /** @description 想定外のエラー */
+      500: {
+        headers: {
+          /** @description REST API呼び出しでエラーなどが発生した時に問い合わせするための識別子 */
+          "X-Track"?: string;
+        };
+        content: {
+          "application/json": {
+            errors?: {
+              errorCode: string;
+              errorDescription: string;
+            }[];
           };
         };
       };

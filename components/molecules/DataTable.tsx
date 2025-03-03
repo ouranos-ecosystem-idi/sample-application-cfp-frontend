@@ -143,6 +143,7 @@ type Props = {
   isLoading?: boolean;
   numberOfRow?: number;
   skeletonProperty?: { height?: string; };
+  tableWidth?: number;
 };
 // tabを使わない場合、すべてstartHeadersとして追加する
 function getInitialHeaderForTabs(
@@ -172,6 +173,7 @@ export function DataTable({
   stickyOptions,
   isLoading = false,
   skeletonProperty,
+  tableWidth
 }: Props) {
   // 行ID重複チェック
   if (
@@ -209,7 +211,7 @@ export function DataTable({
           full: isLoading,
         })}`}
       >
-        <table className={'table-auto w-full'}>
+        <table className={`table-auto ${tableWidth ? `w-[${tableWidth}px]` : 'w-full'}`}>
           <thead
             className={`after:table-row after:h-2 z-10 before:content-[""]
             before:absolute before:bottom-2 before:w-[1381px] before:left-[-2px]

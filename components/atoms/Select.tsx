@@ -2,7 +2,7 @@ import { isEmpty } from '@/lib/utils';
 import { ChangeEvent, RefObject, memo, useEffect, useRef, useState } from 'react';
 import { tv } from 'tailwind-variants';
 const select = tv({
-  base: 'select select-bordered select-sm bg-white w-full max-w-xs px-3 font-semibold border-neutral rounded  h-11 text-xs focus:outline-none pr-10 truncate',
+  base: 'select select-bordered select-sm bg-white w-full max-w-md px-3 font-semibold border-neutral rounded  h-11 text-xs focus:outline-none pr-10 truncate',
   variants: {
     error: {
       true: 'border-error focus:border-error',
@@ -112,7 +112,7 @@ function _Select({
     }
   };
 
-  const containerClass = `relative ${selectedValue === 'hiddenOption' ? 'text-neutral' : ''
+  const containerClass = `relative w-full ${selectedValue === 'hiddenOption' ? 'text-neutral' : ''
     }`;
 
   return (

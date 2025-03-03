@@ -1,3 +1,52 @@
+import { Button } from '@/components/atoms/Button';
+import DisplayHyphen from '@/components/atoms/DisplayHyphen';
+import InputTextBox from '@/components/atoms/InputTextBox';
+import LevelIcon from '@/components/atoms/LevelIcon';
+import SkeletonColumn from '@/components/atoms/SkeletonColumn';
+import StatusBadge from '@/components/atoms/StatusBadge';
+import Tab from '@/components/atoms/Tab';
+import TerminalIcon from '@/components/atoms/TerminalIcon';
+import {
+  Column,
+  DataTable,
+  HeaderForTabs,
+  ParentHeader,
+} from '@/components/molecules/DataTable';
+import PopupModal from '@/components/molecules/PopupModal';
+import SectionHeader from '@/components/molecules/SectionHeader';
+import CertificationModal from '@/components/organisms/CertificationModal';
+import { doTry } from '@/lib/try';
+import {
+  CertificationDataType,
+  CfpTypes,
+  CfpUnits,
+  DqrSheetDataType,
+  DqrType,
+  DqrValueType,
+  Operator,
+  Parts,
+  PartsWithCfpDataType,
+  Plant,
+  TradeRequestDataType,
+} from '@/lib/types';
+import {
+  calcCfpSum,
+  calcDqrSum,
+  convertFormNumberToNumber,
+  formatNumber,
+  getFormikErrorMessage,
+  getRequestStatus,
+  getTradeRequestStatusColor,
+  getTradeRequestStatusName,
+  isDecimalPartDigitsWithin,
+  isEmpty,
+  isIntegerPartDigitsWithin,
+  isOwnParts,
+  selectUnitFromAmountRequiredUnit,
+} from '@/lib/utils';
+import '@/lib/yup.locale';
+import { Eye } from '@phosphor-icons/react/dist/ssr/Eye';
+import { FilePlus } from '@phosphor-icons/react/dist/ssr/FilePlus';
 import {
   FormikErrors,
   FormikProvider,
@@ -6,56 +55,7 @@ import {
 } from 'formik';
 import { ComponentProps, ReactNode, useEffect, useMemo, useState } from 'react';
 import * as Yup from 'yup';
-import '@/lib/yup.locale';
-import {
-  CertificationDataType,
-  CfpTypes,
-  DqrType,
-  DqrValueType,
-  Parts,
-  PartsWithCfpDataType,
-  TradeRequestDataType,
-  Operator,
-  Plant,
-  CfpUnits,
-  DqrSheetDataType,
-} from '@/lib/types';
-import {
-  calcCfpSum,
-  getTradeRequestStatusColor,
-  getTradeRequestStatusName,
-  isOwnParts,
-  isEmpty,
-  calcDqrSum,
-  selectUnitFromAmountRequiredUnit,
-  formatNumber,
-  getFormikErrorMessage,
-  isIntegerPartDigitsWithin,
-  isDecimalPartDigitsWithin,
-  convertFormNumberToNumber,
-  getRequestStatus,
-} from '@/lib/utils';
-import { doTry } from '@/lib/try';
-import LevelIcon from '@/components/atoms/LevelIcon';
-import TerminalIcon from '@/components/atoms/TerminalIcon';
-import StatusBadge from '@/components/atoms/StatusBadge';
-import DisplayHyphen from '@/components/atoms/DisplayHyphen';
-import { Button } from '@/components/atoms/Button';
-import {
-  Column,
-  DataTable,
-  HeaderForTabs,
-  ParentHeader,
-} from '@/components/molecules/DataTable';
-import SectionHeader from '@/components/molecules/SectionHeader';
-import PopupModal from '@/components/molecules/PopupModal';
-import { FilePlus } from '@phosphor-icons/react/dist/ssr/FilePlus';
-import { Eye } from '@phosphor-icons/react/dist/ssr/Eye';
-import CertificationModal from '@/components/organisms/CertificationModal';
-import Tab from '@/components/atoms/Tab';
-import InputTextBox from '@/components/atoms/InputTextBox';
 import { PlantCell } from './PlantCell';
-import SkeletonColumn from '@/components/atoms/SkeletonColumn';
 
 type Props = {
   parentPartWithCfpData?: PartsWithCfpDataType;
@@ -80,6 +80,7 @@ type Props = {
   ) => Promise<void>;
   onUploadCert: ComponentProps<typeof CertificationModal>['onUploadCert'];
   onDownloadCert: ComponentProps<typeof CertificationModal>['onDownloadCert'];
+  onDeleteCert: ComponentProps<typeof CertificationModal>['onDeleteCert'];
   getFormData?: (fetch: () => FormType) => void;
   isPartsLoading: boolean;
   isCfpDataLoading: boolean;
@@ -457,7 +458,7 @@ const CfpColumn = ({
     return <SkeletonColumn className='py-1' />;
   else if (isEditable) return <>{inputText}</>;
   else if (value === undefined) return <DisplayHyphen />;
-  else return <div className='px-3 text-xs'>{formatNumber(value)}</div>;
+  else return <div className='px-3 text-xs'>{value}</div>;
 };
 
 export default function CfpRegisterTable({
@@ -471,6 +472,7 @@ export default function CfpRegisterTable({
   onModalRefresh,
   onUploadCert,
   onDownloadCert,
+  onDeleteCert,
   getFormData,
   isPartsLoading,
   isCfpDataLoading: isChildrenCfpDataLoading,
@@ -925,7 +927,7 @@ export default function CfpRegisterTable({
               />
             );
           } else if (value === undefined) return <DisplayHyphen />;
-          else return <div className='px-3 text-xs'>{formatNumber(value)}</div>;
+          else return <div className='px-3 text-xs'>{value}</div>;
         },
       },
       {
@@ -978,7 +980,7 @@ export default function CfpRegisterTable({
               />
             );
           } else if (value === undefined) return <DisplayHyphen />;
-          else return <div className='px-3 text-xs'>{formatNumber(value)}</div>;
+          else return <div className='px-3 text-xs'>{value}</div>;
         },
       },
 
@@ -1446,6 +1448,7 @@ export default function CfpRegisterTable({
         setData={setCertificationModalData}
         onUploadCert={onUploadCert}
         onDownloadCert={onDownloadCert}
+        onDeleteCert={onDeleteCert}
       />
     </>
   );

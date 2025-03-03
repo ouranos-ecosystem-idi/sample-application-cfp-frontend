@@ -1,29 +1,29 @@
 'use client';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { repository } from '@/api/repository';
-import SectionHeader from '@/components/molecules/SectionHeader';
-import Template from '@/components/template/Template';
-import {
-  PartsWithCfpDataType,
-  TradeResponseDataType,
-  Operator,
-  Plant,
-} from '@/lib/types';
-import { useEffect, useState } from 'react';
-import PartsTableForLinkParts from '@/components/organisms/PartsTableForLinkParts';
-import TradeInfoSheet from '@/components/organisms/TradeInfoSheet';
 import BackButton from '@/components/atoms/BackButton';
-import useErrorHandler from '@/components/template/ErrorHandler';
-import { useAlert } from '@/components/template/AlertHandler';
-import { getPlants } from '@/lib/plantSessionUtils';
 import RefreshButton from '@/components/atoms/RefreshButton';
 import LoadingScreen from '@/components/molecules/LoadingScreen';
+import SectionHeader from '@/components/molecules/SectionHeader';
+import PartsTableForLinkParts from '@/components/organisms/PartsTableForLinkParts';
+import TradeInfoSheet from '@/components/organisms/TradeInfoSheet';
+import { useAlert } from '@/components/template/AlertHandler';
+import useErrorHandler from '@/components/template/ErrorHandler';
+import Template from '@/components/template/Template';
 import {
   PaginationPageName,
   loadHistoryFromSession,
   saveHistoryToSession,
 } from '@/lib/paginationSessionUtils';
+import { getPlants } from '@/lib/plantSessionUtils';
+import {
+  Operator,
+  PartsWithCfpDataType,
+  Plant,
+  TradeResponseDataType,
+} from '@/lib/types';
 import { isAbortError } from 'next/dist/server/pipe-readable';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const PAGE_NAME: PaginationPageName = 'link-parts';
 
@@ -219,6 +219,25 @@ export default function RequestsLinkPartsPage() {
     }
   }
 
+  async function updateReplyMessage(requestId: string, replyMessage: string) {
+    if (!tradeResponseData?.tradeId) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await repository.setReplyMessage(
+        requestId,
+        replyMessage,
+      );
+      router.refresh;
+      showAlert.info('応答メッセージ更新を申請しました。');
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <>
       <LoadingScreen isOpen={isLoading} />
@@ -251,6 +270,7 @@ export default function RequestsLinkPartsPage() {
             tradeResponseData={tradeResponseData}
             operatorsData={operatorsData}
             isLoading={isSheetLoading}
+            onUpdate={updateReplyMessage}
           />,
           <PartsTableForLinkParts
             key='parts'

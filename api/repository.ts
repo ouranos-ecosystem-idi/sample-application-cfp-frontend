@@ -1,39 +1,41 @@
-import {
-  CertificationDataType,
-  Plant,
-  PartsStructure,
-  PartsWithCfpDataType,
-  Parts,
-  TradeResponseDataType,
-  TradeStatus,
-  TradeRequestDataType
-} from '@/lib/types';
-import { CfpRequestFormRowType } from '@/components/organisms/CfpRequestTable';
-import {
-  convertCfpRequestFormRowTypeToTradeRequestModel,
-  convertPartsModelToPartsWithoutLevel,
-  convertNotificationModelListToNotificationDataTypeList,
-  convertPartsDataAndTradeModelToTradeRequestDataType,
-  convertPartsDataListAndCfpModelListToPartsWithCfpDataList,
-  convertTradeResponseModelToTradeResponseDataType,
-  convertTradeResponseModelListToTradeResponseDataTypeList,
-  convertPartsStructureModelToPartsStructure,
-  convertPartsWithCfpToCfpModel,
-  convertTradeStatusToStatusModel,
-  convertTradeResponseDataTypeToRejectStatusModel,
-  convertOperatorModelToOperator,
-  convertPlantModelToPlant,
-  convertPlantToPlantModel,
-  convertPartsModelToParts,
-  convertPartsStructureToPartsStructureModel,
-  convertCfpCertificationModelToCfpCertification,
-  convertStatusModelToTradeStatus
-} from '@/lib/converters';
+import { getOperatorId } from '@/api/accessToken';
 import { dataTransportApiClient } from '@/api/dataTransport';
 import { traceabilityApiClient } from '@/api/traceability';
-import { getOperatorId } from '@/api/accessToken';
+import { CfpRequestFormRowType } from '@/components/organisms/CfpRequestTable';
 import { PARTS_NUM } from '@/lib/constants';
+import {
+  convertCertificationInfoToFileUploadUrlPostRequest,
+  convertCfpCertificationModelToCfpCertification,
+  convertCfpRequestFormRowTypeToTradeRequestModel,
+  convertNotificationModelListToNotificationDataTypeList,
+  convertOperatorModelToOperator,
+  convertPartsDataAndTradeModelToTradeRequestDataType,
+  convertPartsDataListAndCfpModelListToPartsWithCfpDataList,
+  convertPartsModelToParts,
+  convertPartsModelToPartsWithoutLevel,
+  convertPartsStructureModelToPartsStructure,
+  convertPartsStructureToPartsStructureModel,
+  convertPartsWithCfpToCfpModel,
+  convertPlantModelToPlant,
+  convertPlantToPlantModel,
+  convertStatusModelToTradeStatus,
+  convertTradeResponseDataTypeToRejectStatusModel,
+  convertTradeResponseModelListToTradeResponseDataTypeList,
+  convertTradeResponseModelToTradeResponseDataType,
+  convertTradeStatusToStatusModel
+} from '@/lib/converters';
+import {
+  CertificationDataType,
+  Parts,
+  PartsStructure,
+  PartsWithCfpDataType,
+  Plant,
+  TradeRequestDataType,
+  TradeResponseDataType,
+  TradeStatus
+} from '@/lib/types';
 import { retryWithInterval, splitArrayIntoChunks } from '@/lib/utils';
+import { paths } from './schemas/traceability';
 
 export const repository = {
   async login(loginForm: {
@@ -108,6 +110,11 @@ export const repository = {
     return convertPartsStructureModelToPartsStructure(
       await dataTransportApiClient.getPartsStructure(traceId)
     );
+  },
+
+  // 部品構成情報の削除する
+  async deletePartsStructure(traceId: string) {
+    await dataTransportApiClient.deleteParts(traceId);
   },
 
   // 部品情報に対して、取引関係情報を取得する
@@ -193,6 +200,19 @@ export const repository = {
   // 部品紐付け
   async linkPartsWithTradeRequest(data: { tradeId: string; traceId: string; }) {
     return dataTransportApiClient.putTradeResponse(data);
+  },
+
+  // 応答メッセージ登録
+  async setReplyMessage(
+    requestId: string,
+    replyMessage: string
+  ) {
+    const operatorId = getOperatorId();
+    await traceabilityApiClient.updateReplyMessage({
+      operatorId,
+      requestId,
+      replyMessage
+    });
   },
 
   // CFP情報&CFP証明書情報 公開設定
@@ -319,12 +339,30 @@ export const repository = {
     traceId: string;
     cfpCertificationId?: string;
     cfpCertificationDescription?: string;
-    cfpCertificationFiles: File[];
+    cfpCertificationFileInfo: File[];
   }) {
     const operatorId = getOperatorId();
+
+    // ファイルアップロード用のURLを取得する
+    const uploadUrlInfo = await traceabilityApiClient.getUploadUrl(
+      (convertCertificationInfoToFileUploadUrlPostRequest(data))
+    );
+    // アップロードで使用するkeyを取得
+    const key = await traceabilityApiClient.getUploadUrlKey();
+    // 取得したURLにファイルをアップロードする
+    await traceabilityApiClient.postFileUpload(uploadUrlInfo[0].URL as keyof paths, data.cfpCertificationFileInfo, key);
+    // ファイル情報を登録する
+    let creatFileInfo = [{
+      fileId: uploadUrlInfo[0].fileId,
+      fileName: uploadUrlInfo[0].fileName,
+    }];
+
     const status = await traceabilityApiClient.postCfpCertifications({
-      operatorId,
-      ...data,
+      operatorId: operatorId,
+      traceId: data.traceId,
+      cfpCertificationId: data.cfpCertificationId,
+      cfpCertificationDescription: data.cfpCertificationDescription,
+      cfpCertificationFileInfo: creatFileInfo,
     });
     return status === 200;
   },
@@ -362,26 +400,28 @@ export const repository = {
   ) {
     const operatorId = getOperatorId();
 
-    // contentはbase64URLでエンコードされている。
-    const content = await traceabilityApiClient.getCfpCertificationFiles({
+    // ダウンロード用のURLを取得する
+    const downloadUrlInfo = await traceabilityApiClient.getDownloadUrl({
       operatorId,
       fileOperatorId,
       fileId,
       downloadType,
       cfpCertificationId,
     });
-
-    // base64URL->base64に変換
-    const baseURLDecoded = content.replace(/-/g, '+').replace(/_/g, '/');
-
-    // base64->バイナリに変換
-    const decodedContent = Buffer.from(baseURLDecoded, 'base64');
-
-    return new Blob([decodedContent]);
+    // 取得したURLを返す
+    return downloadUrlInfo.URL;
   },
 
-  // 部品構成情報を削除する
-  async deletePartsStructure(traceId: string) {
-    await dataTransportApiClient.deleteParts(traceId);
+  // CFP証明書ファイルを削除する
+  async deleteCfpCertificationFile(
+    traceId: string,
+    fileId: string
+  ) {
+    const operatorId = getOperatorId();
+    await traceabilityApiClient.deleteCfpCertificationFile({
+      operatorId,
+      traceId,
+      fileId
+    });
   },
 };

@@ -94,7 +94,7 @@ export default function NotificationsTable({
                 className='stroke-default-text stroke-[1.5] mr-1'
               />
               <div className='font-semibold'>
-                {notificationSource === 'respondent' ? '仕入先' : '納入先'}
+                {notificationSource === 'respondent' ? '仕入先' : '納品先'}
               </div>
             </>
           );

@@ -1,5 +1,15 @@
 'use client';
 
+import { getOperatorId } from '@/api/accessToken';
+import AddRowButton from '@/components/atoms/AddRowButton';
+import { Button } from '@/components/atoms/Button';
+import CheckBox from '@/components/atoms/CheckBox';
+import InputTextBox from '@/components/atoms/InputTextBox';
+import { Select } from '@/components/atoms/Select';
+import PopupModal from '@/components/molecules/PopupModal';
+import SectionHeader from '@/components/molecules/SectionHeader';
+import { MAX_CHILD_PARTS_NUM } from '@/lib/constants';
+import { convertPartsFormTypeToPartsStructure } from '@/lib/converters';
 import {
   AmountRequiredUnit,
   AmountRequiredUnitsList,
@@ -9,21 +19,21 @@ import {
   Plant,
 } from '@/lib/types';
 import {
+  getFormikErrorMessage,
+  isDecimalPartDigitsWithin,
+  isIntegerPartDigitsWithin,
+  isValidNumberString,
+} from '@/lib/utils';
+import '@/lib/yup.locale';
+import { MinusCircle } from '@phosphor-icons/react/dist/ssr/MinusCircle';
+import csv from 'csv-parser';
+import {
   ArrayHelpers,
   FieldArray,
   FormikProvider,
   FormikValues,
   useFormik,
 } from 'formik';
-import AddRowButton from '@/components/atoms/AddRowButton';
-import { MAX_CHILD_PARTS_NUM } from '@/lib/constants';
-import * as Yup from 'yup';
-import '@/lib/yup.locale';
-import { tv } from 'tailwind-variants';
-import CheckBox from '@/components/atoms/CheckBox';
-import SectionHeader from '@/components/molecules/SectionHeader';
-import { Button } from '@/components/atoms/Button';
-import { MinusCircle } from '@phosphor-icons/react/dist/ssr/MinusCircle';
 import {
   CSSProperties,
   ChangeEvent,
@@ -32,36 +42,62 @@ import {
   useEffect,
   useState,
 } from 'react';
-import PopupModal from '@/components/molecules/PopupModal';
-import csv from 'csv-parser';
-import InputTextBox from '@/components/atoms/InputTextBox';
-import {
-  getFormikErrorMessage,
-  isDecimalPartDigitsWithin,
-  isIntegerPartDigitsWithin,
-  isValidNumberString,
-} from '@/lib/utils';
-import { Select } from '@/components/atoms/Select';
-import { convertPartsFormTypeToPartsStructure } from '@/lib/converters';
-import { getOperatorId } from '@/api/accessToken';
+import { tv } from 'tailwind-variants';
+import * as Yup from 'yup';
+
 
 const table = tv({
-  base: 'table-auto w-full',
+  base: `table-auto w-[1760px]`,
 });
 const tr = tv({
   base: 'border-b-[1px] border-b-neutral last:border-none',
 });
 const th = tv({
-  base: 'h-9 p-0 first:pl-5 last:pl-5 pl-3 bg-light-gray font-normal text-xs leading-4 [&_*]:text-xs [&_*]:leading-5 sticky top-0',
+  base: 'h-9 p-0 first:pl-5 last:pl-5 pl-4 bg-light-gray font-normal text-xs leading-4 [&_*]:text-xs [&_*]:leading-5',
+  variants: {
+    isSticky: {
+      true: 'sticky top-0',
+    }
+  },
+});
+const th_inner = tv({
+  base: 'h-7 flex items-center w-full pr-4',
+  variants: {
+    divideAfter: {
+      true: 'border-r border-r-gray',
+    }
+  }
 });
 const td = tv({
-  base: 'p-0 py-5 first:pl-5 last:pl-5 pl-3 relative',
+  base: 'p-0 first:pl-5 last:pl-5 pl-4',
+  variants: {
+    divideAfter: {
+      true: 'py-2',
+      false: 'py-5'
+    },
+  },
+  defaultVariants: {
+    divideAfter: false
+  }
+});
+
+const td_inner = tv({
+  base: 'flex w-full h-full items-center text-xs break-all pr-4',
+  variants: {
+    divideAfter: {
+      true: 'border-r border-r-gray pr-4 h-[68px]',
+    },
+  },
 });
 
 //CSVヘッダー
 export const PART_CSV_HEADERS = {
   partsName: '部品項目',
   supportPartsName: '補助項目',
+  partsLabelName: '部品名称',
+  partsAddInfo1: 'CFP算出バージョン',
+  partsAddInfo2: 'CFP算出期間',
+  partsAddInfo3: '任意項目',
   plantId: '事業所識別子',
   amountRequired: '活動量',
   amountRequiredUnit: '単位',
@@ -105,40 +141,54 @@ function TableHeader({
 }) {
   const stickyStile: CSSProperties = isSticky
     ? {
-      top: 146,
+      top: 40,
       position: 'sticky',
     }
     : {};
   return (
     <thead
-      className='z-20 before:content-[""] before:absolute before:bottom-0 before:w-full before:bg-[#FAFAFA] before:z-[-1] before:h-24'
+      className='z-20'
       style={stickyStile}
     >
       <tr>
         <th
-          className={th()}
+          className={th({ isSticky })}
           style={{ width: '220px', paddingLeft: '16px' }}
           align='left'
         >
           部品項目
         </th>
-        <th className={th()} style={{ width: '212px' }} align='left'>
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
           補助項目
         </th>
-        <th className={th()} style={{ width: '372px' }} align='left'>
-          事業所識別子
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
+          部品名称
         </th>
-        <th className={th()} style={{ width: '212px' }} align='left'>
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
+          CFP算出バージョン
+        </th>
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
+          CFP算出期間
+        </th>
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
+          任意項目
+        </th>
+        <th className={th({ isSticky })} style={{ width: '370px' }} align='left'>
+          <div className={th_inner({ divideAfter: !isParentPartsHeader })}>
+            事業所識別子
+          </div>
+        </th>
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
           {isParentPartsHeader ? '' : '活動量'}
         </th>
-        <th className={th()} style={{ width: '212px' }} align='left'>
+        <th className={th({ isSticky })} style={{ width: '212px' }} align='left'>
           単位
         </th>
-        <th className={th()} align='center' style={{ width: '44px' }}>
+        <th className={th({ isSticky })} align='center' style={{ width: '44px' }}>
           終端
         </th>
-        <th className={th()} style={{ width: '60px' }} />
-        <th className={th()} style={{ width: '0px' }} />
+        <th className={th({ isSticky })} style={{ width: '60px' }} />
+        <th className={th({ isSticky })} style={{ width: '0px' }} />
       </tr>
     </thead>
   );
@@ -151,6 +201,10 @@ const initialPart: PartsFormRowType = {
   partsName: '',
   plantId: '',
   supportPartsName: '',
+  partsLabelName: '',
+  partsAddInfo1: '',
+  partsAddInfo2: '',
+  partsAddInfo3: '',
   terminatedFlag: false,
 };
 
@@ -161,8 +215,12 @@ const initialValues: PartsFormType = {
 };
 
 const parentValidationSchema = Yup.object({
-  partsName: Yup.string().required().max(20),
-  supportPartsName: Yup.string().max(10),
+  partsName: Yup.string().required().max(50),
+  supportPartsName: Yup.string().max(50),
+  partsLabelName: Yup.string().required().max(50),
+  partsAddInfo1: Yup.string().max(50),
+  partsAddInfo2: Yup.string().max(50),
+  partsAddInfo3: Yup.string().max(50),
   plantId: Yup.string().required('選択必須'), // yup.locale.ts内のrequiredメッセージとは異なる文言のためここで指定
   amountRequiredUnit: Yup.string().required('選択必須'),
 });
@@ -474,226 +532,313 @@ export default function PartsRgisterForm({
       />
       <FormikProvider value={formik}>
         <form onSubmit={formik.handleSubmit}>
-          <SectionHeader
-            className='pb-4 relative'
-            title='親部品(レベル1)'
-            variant='h3'
-            align='bottom'
-          />
-          <table className={table()}>
-            <TableHeader isParentPartsHeader={true} />
-            <tbody>
-              <tr className={tr()}>
-                <td className={td()} style={{ paddingLeft: '16px' }}>
-                  <InputTextBox
-                    error={getFormikErrorMessage({
-                      name: 'parentParts.partsName',
-                      formik,
-                    })}
-                    {...formik.getFieldProps('parentParts.partsName')}
-                    placeholder='入力必須'
+          <div className='overflow-auto max-h-[750px]'>
+            <SectionHeader
+              className='pb-4 relative'
+              title='親部品(レベル1)'
+              variant='h3'
+              align='bottom'
+            />
+            <table className={table()}>
+              <TableHeader isParentPartsHeader={true} />
+              <tbody>
+                <tr className={tr()}>
+                  <td className={td()} style={{ paddingLeft: '16px' }}>
+                    <InputTextBox
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.partsName',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.partsName')}
+                      placeholder='入力必須'
+                    />
+                  </td>
+                  <td className={td()}>
+                    <InputTextBox
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.supportPartsName',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.supportPartsName')}
+                    />
+                  </td>
+                  <td className={td()}>
+                    <InputTextBox
+                      //部品名称
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.partsLabelName',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.partsLabelName')}
+                    />
+                  </td>
+                  <td className={td()}>
+                    <InputTextBox
+                      //CFP算出バージョン
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.partsAddInfo1',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.partsAddInfo1')}
+                    />
+                  </td>
+                  <td className={td()}>
+                    <InputTextBox
+                      //CFP算出期間
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.partsAddInfo2',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.partsAddInfo2')}
+                    />
+                  </td>
+                  <td className={td()}>
+                    <InputTextBox
+                      //任意項目
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.partsAddInfo3',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.partsAddInfo3')}
+                    />
+                  </td>
+                  <td className={td()}>
+                    <div className={td_inner()}>
+                      <Select
+                        className='bg-white'
+                        selectOptions={selectOptions}
+                        hiddenText='選択必須'
+                        error={getFormikErrorMessage({
+                          name: 'parentParts.plantId',
+                          formik,
+                        })}
+                        {...formik.getFieldProps(`parentParts.plantId`)}
+                        onChange={(e) => {
+                          formik.setFieldValue(
+                            'parentParts.plantId',
+                            e.target.value
+                          );
+                        }}
+                      />
+                    </div>
+                  </td>
+                  <td className={td()}></td>
+                  <td className={td()}>
+                    <Select
+                      selectOptions={AmountRequiredUnitsList.reduce<{
+                        [key: string]: string;
+                      }>((acc, unit) => {
+                        acc[unit] = unit;
+                        return acc;
+                      }, {})}
+                      hiddenText='選択必須'
+                      error={getFormikErrorMessage({
+                        name: 'parentParts.amountRequiredUnit',
+                        formik,
+                      })}
+                      {...formik.getFieldProps('parentParts.amountRequiredUnit')}
+                      onChange={(e) => {
+                        formik.setFieldValue(
+                          'parentParts.amountRequiredUnit',
+                          e.target.value
+                        );
+                      }}
+                    />
+                  </td>
+                  <td className={td()} align='center'>
+                    <CheckBox
+                      disabled={formik.values.childrenParts.length > 0}
+                      checked={formik.values.parentParts.terminatedFlag}
+                      setChecked={(value) => {
+                        formik.setFieldValue('parentParts.terminatedFlag', value);
+                      }}
+                    />
+                  </td>
+                  <td className={td()} />
+                </tr>
+              </tbody>
+            </table>
+            <FieldArray name='childrenParts'>
+              {(arrayHelpers: ArrayHelpers<PartsFormRowType[]>) => (
+                <div>
+                  <SectionHeader
+                    title='構成部品(レベル2)'
+                    className={`pb-4 sticky top-0 z-20 bg-[#FAFAFA] w-[1760px]`}
+                    variant='h3'
                   />
-                </td>
-                <td className={td()}>
-                  <InputTextBox
-                    error={getFormikErrorMessage({
-                      name: 'parentParts.supportPartsName',
-                      formik,
-                    })}
-                    {...formik.getFieldProps('parentParts.supportPartsName')}
+                  <table className={table()}>
+                    <TableHeader isParentPartsHeader={false} isSticky={true} />
+                    <tbody>
+                      {formik.values.childrenParts.map((part, index) => (
+                        <tr className={tr()} key={index}>
+                          <td className={td()}>
+                            <InputTextBox
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].partsName`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(
+                                `childrenParts[${index}].partsName`
+                              )}
+                              placeholder='入力必須'
+                            />
+                          </td>
+                          <td className={td()}>
+                            <InputTextBox
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].supportPartsName`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(
+                                `childrenParts[${index}].supportPartsName`
+                              )}
+                            />
+                          </td>
+                          <td className={td()}>
+                            <InputTextBox
+                              //部品名称
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].partsLabelName`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(`childrenParts[${index}].partsLabelName`)}
+                            />
+                          </td>
+                          <td className={td()}>
+                            <InputTextBox
+                              //CFP算出バージョン
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].partsAddInfo1`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(`childrenParts[${index}].partsAddInfo1`)}
+                            />
+                          </td>
+                          <td className={td()}>
+                            <InputTextBox
+                              //CFP算出期間
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].partsAddInfo2`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(`childrenParts[${index}].partsAddInfo2`)}
+                            />
+                          </td>
+                          <td className={td()}>
+                            <InputTextBox
+                              //任意項目
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].partsAddInfo3`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(`childrenParts[${index}].partsAddInfo3`)}
+                            />
+                          </td>
+                          <td className={td({ divideAfter: true })}>
+                            <div className={td_inner({ divideAfter: true })}>
+                              <Select
+                                className='bg-white'
+                                selectOptions={selectOptions}
+                                hiddenText='選択必須'
+                                error={getFormikErrorMessage({
+                                  name: `childrenParts[${index}].plantId`,
+                                  formik,
+                                })}
+                                {...formik.getFieldProps(
+                                  `childrenParts[${index}].plantId`
+                                )}
+                                onChange={(e) => {
+                                  formik.setFieldValue(
+                                    `childrenParts[${index}].plantId`,
+                                    e.target.value
+                                  );
+                                }}
+                              />
+                            </div>
+                          </td>
+                          <td className={td()}>
+                            <InputTextBox
+                              type='number'
+                              align='right'
+                              placeholder='半角数字で入力*'
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].amountRequired`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(
+                                `childrenParts[${index}].amountRequired`
+                              )}
+                            />
+                          </td>
+                          <td className={td()}>
+                            <Select
+                              selectOptions={AmountRequiredUnitsList.reduce<{
+                                [key: string]: string;
+                              }>((acc, unit) => {
+                                acc[unit] = unit;
+                                return acc;
+                              }, {})}
+                              hiddenText='選択必須'
+                              error={getFormikErrorMessage({
+                                name: `childrenParts[${index}].amountRequiredUnit`,
+                                formik,
+                              })}
+                              {...formik.getFieldProps(
+                                `childrenParts[${index}].amountRequiredUnit`
+                              )}
+                              onChange={(e) => {
+                                formik.setFieldValue(
+                                  `childrenParts[${index}].amountRequiredUnit`,
+                                  e.target.value
+                                );
+                              }}
+                            />
+                          </td>
+                          <td className={td()} align='center'>
+                            <CheckBox
+                              checked={
+                                formik.values.childrenParts[index].terminatedFlag
+                              }
+                              setChecked={(value) => {
+                                formik.setFieldValue(
+                                  `childrenParts[${index}].terminatedFlag`,
+                                  value
+                                );
+                              }}
+                            />
+                          </td>
+                          <td className={td()} align='center'>
+                            <MinusCircle
+                              className='cursor-pointer'
+                              size={24}
+                              color='#F65E2D'
+                              onClick={() => arrayHelpers.remove(index)}
+                            />
+                          </td>
+                          <td className={td()} />
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {formik.values.childrenParts.length === 0 && (
+                    <div className='w-full text-center py-20 text-lg font-semibold text-neutral'>
+                      追加された構成部品はありません
+                    </div>
+                  )}
+                  <AddRowButton
+                    hasBorder={true}
+                    disabled={
+                      formik.values.parentParts.terminatedFlag ||
+                      formik.values.childrenParts.length >= MAX_CHILD_PARTS_NUM
+                    }
+                    onClick={() => arrayHelpers.push(initialPart)}
+                    className='pr-[31px] flex-row-reverse pb-5 '
+                    wLength={1760}
                   />
-                </td>
-                <td className={td()}>
-                  <Select
-                    className='bg-white'
-                    selectOptions={selectOptions}
-                    hiddenText='選択必須'
-                    error={getFormikErrorMessage({
-                      name: 'parentParts.plantId',
-                      formik,
-                    })}
-                    {...formik.getFieldProps(`parentParts.plantId`)}
-                    onChange={(e) => {
-                      formik.setFieldValue(
-                        'parentParts.plantId',
-                        e.target.value
-                      );
-                    }}
-                  />
-                </td>
-                <td className={td()}></td>
-                <td className={td()}>
-                  <Select
-                    selectOptions={AmountRequiredUnitsList.reduce<{
-                      [key: string]: string;
-                    }>((acc, unit) => {
-                      acc[unit] = unit;
-                      return acc;
-                    }, {})}
-                    hiddenText='選択必須'
-                    error={getFormikErrorMessage({
-                      name: 'parentParts.amountRequiredUnit',
-                      formik,
-                    })}
-                    {...formik.getFieldProps('parentParts.amountRequiredUnit')}
-                    onChange={(e) => {
-                      formik.setFieldValue(
-                        'parentParts.amountRequiredUnit',
-                        e.target.value
-                      );
-                    }}
-                  />
-                </td>
-                <td className={td()} align='center'>
-                  <CheckBox
-                    disabled={formik.values.childrenParts.length > 0}
-                    checked={formik.values.parentParts.terminatedFlag}
-                    setChecked={(value) => {
-                      formik.setFieldValue('parentParts.terminatedFlag', value);
-                    }}
-                  />
-                </td>
-                <td className={td()} />
-              </tr>
-            </tbody>
-          </table>
-          <FieldArray name='childrenParts'>
-            {(arrayHelpers: ArrayHelpers<PartsFormRowType[]>) => (
-              <div>
-                <SectionHeader
-                  title='構成部品(レベル2)'
-                  className='pt-6 pb-4'
-                  variant='h3'
-                  stickyOptions={{ top: 84 }}
-                />
-                <table className={table()}>
-                  <TableHeader isParentPartsHeader={false} isSticky={true} />
-                  <tbody>
-                    {formik.values.childrenParts.map((part, index) => (
-                      <tr className={tr()} key={index}>
-                        <td className={td()}>
-                          <InputTextBox
-                            error={getFormikErrorMessage({
-                              name: `childrenParts[${index}].partsName`,
-                              formik,
-                            })}
-                            {...formik.getFieldProps(
-                              `childrenParts[${index}].partsName`
-                            )}
-                            placeholder='入力必須'
-                          />
-                        </td>
-                        <td className={td()}>
-                          <InputTextBox
-                            error={getFormikErrorMessage({
-                              name: `childrenParts[${index}].supportPartsName`,
-                              formik,
-                            })}
-                            {...formik.getFieldProps(
-                              `childrenParts[${index}].supportPartsName`
-                            )}
-                          />
-                        </td>
-                        <td className={td()}>
-                          <Select
-                            className='bg-white'
-                            selectOptions={selectOptions}
-                            hiddenText='選択必須'
-                            error={getFormikErrorMessage({
-                              name: `childrenParts[${index}].plantId`,
-                              formik,
-                            })}
-                            {...formik.getFieldProps(
-                              `childrenParts[${index}].plantId`
-                            )}
-                            onChange={(e) => {
-                              formik.setFieldValue(
-                                `childrenParts[${index}].plantId`,
-                                e.target.value
-                              );
-                            }}
-                          />
-                        </td>
-                        <td className={td()}>
-                          <InputTextBox
-                            type='number'
-                            align='right'
-                            placeholder='半角数字で入力*'
-                            error={getFormikErrorMessage({
-                              name: `childrenParts[${index}].amountRequired`,
-                              formik,
-                            })}
-                            {...formik.getFieldProps(
-                              `childrenParts[${index}].amountRequired`
-                            )}
-                          />
-                        </td>
-                        <td className={td()}>
-                          <Select
-                            selectOptions={AmountRequiredUnitsList.reduce<{
-                              [key: string]: string;
-                            }>((acc, unit) => {
-                              acc[unit] = unit;
-                              return acc;
-                            }, {})}
-                            hiddenText='選択必須'
-                            error={getFormikErrorMessage({
-                              name: `childrenParts[${index}].amountRequiredUnit`,
-                              formik,
-                            })}
-                            {...formik.getFieldProps(
-                              `childrenParts[${index}].amountRequiredUnit`
-                            )}
-                            onChange={(e) => {
-                              formik.setFieldValue(
-                                `childrenParts[${index}].amountRequiredUnit`,
-                                e.target.value
-                              );
-                            }}
-                          />
-                        </td>
-                        <td className={td()} align='center'>
-                          <CheckBox
-                            checked={
-                              formik.values.childrenParts[index].terminatedFlag
-                            }
-                            setChecked={(value) => {
-                              formik.setFieldValue(
-                                `childrenParts[${index}].terminatedFlag`,
-                                value
-                              );
-                            }}
-                          />
-                        </td>
-                        <td className={td()} align='center'>
-                          <MinusCircle
-                            className='cursor-pointer'
-                            size={24}
-                            color='#F65E2D'
-                            onClick={() => arrayHelpers.remove(index)}
-                          />
-                        </td>
-                        <td className={td()} />
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {formik.values.childrenParts.length === 0 && (
-                  <div className='w-full text-center py-20 text-lg font-semibold text-neutral'>
-                    追加された構成部品はありません
-                  </div>
-                )}
-                <AddRowButton
-                  hasBorder={true}
-                  disabled={
-                    formik.values.parentParts.terminatedFlag ||
-                    formik.values.childrenParts.length >= MAX_CHILD_PARTS_NUM
-                  }
-                  onClick={() => arrayHelpers.push(initialPart)}
-                />
-              </div>
-            )}
-          </FieldArray>
+                </div>
+              )}
+            </FieldArray>
+          </div>
           <PopupModal
             button={
               <Button

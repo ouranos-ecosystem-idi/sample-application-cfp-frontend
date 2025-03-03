@@ -22,5 +22,5 @@ export default function DisplayHyphen({
   align = 'center',
   className = '',
 }: Props) {
-  return <div className={div({ align }) + ' ' + className}>ー</div>;
+  return <div className={div({ align }) + ' ' + className}>-</div>;
 }

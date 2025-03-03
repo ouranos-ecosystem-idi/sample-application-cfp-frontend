@@ -80,12 +80,12 @@ export default function PartsTable({
   const parentHeaders: ParentHeader[] = [
     {
       id: 'partsInfo',
-      colspan: 5,
+      colspan: 6,
       headerElement: '部品構成情報',
     },
     {
       id: 'cfpInfo',
-      colspan: 4,
+      colspan: 2,
       headerElement: 'CFP情報',
     },
   ];
@@ -94,6 +94,7 @@ export default function PartsTable({
       id: 'selected',
       headerElement: '選択',
       justify: 'center',
+      width: 24,
       renderCell: (value, row, rowIdx) =>
         value ? (
           <RadioButton size='18' weight='fill' className='fill-primary' />
@@ -104,7 +105,6 @@ export default function PartsTable({
             onClick={() => setSelectedRow(rowIdx)}
           />
         ),
-      width: 25,
     },
     {
       id: 'level',
@@ -117,7 +117,7 @@ export default function PartsTable({
     {
       id: 'partsName',
       headerElement: '部品項目',
-      width: 112,
+      width: 140,
       renderCell: (value) => (
         <span className='text-sm font-semibold'>{value}</span>
       ),
@@ -125,7 +125,7 @@ export default function PartsTable({
     {
       id: 'supportPartsName',
       headerElement: '補助項目',
-      width: 100,
+      width: 72,
       renderCell: (value) =>
         isEmpty(value) ? (
           <DisplayHyphen />
@@ -142,7 +142,7 @@ export default function PartsTable({
           事業所識別子
         </div>
       ),
-      width: 160,
+      width: 140,
       renderCell: (value) => (
         <PlantCell plantId={value} plants={plants} size='sm' />
       ),
@@ -150,7 +150,7 @@ export default function PartsTable({
     {
       id: 'traceId',
       headerElement: 'トレース識別子',
-      width: 304,
+      width: 272,
       divideAfter: true,
       renderCell: (value) => (
         <Link
@@ -171,7 +171,7 @@ export default function PartsTable({
           排出量(単位)
         </div>
       ),
-      width: 196,
+      width: 256,
       justifyHeader: 'center',
       justify: 'end',
       renderCell: (_, row) => {
@@ -206,7 +206,7 @@ export default function PartsTable({
           排出量(単位)
         </div>
       ),
-      width: 196,
+      width: 256,
       justifyHeader: 'center',
       justify: 'end',
       renderCell: (_, row) => {

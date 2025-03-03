@@ -10,6 +10,10 @@ export type Parts = {
   supportPartsName: string;
   terminatedFlag: boolean;
   traceId?: string;
+  partsLabelName?: string;
+  partsAddInfo1?: string;
+  partsAddInfo2?: string;
+  partsAddInfo3?: string;
 };
 
 export type PartsWithoutLevel = Omit<Parts, 'level'>;
@@ -31,7 +35,8 @@ export type NotificationTypes =
   | 'REQUEST_CANCELED'
   | 'REQUEST_REJECTED'
   | 'CFP_RESPONSED'
-  | 'CFP_UPDATED';
+  | 'CFP_UPDATED'
+  | 'REPLY_MESSAGE_REGISTERED';
 
 export type NotificationDataType = {
   notificationId: string;
@@ -141,6 +146,10 @@ export type PartsFormRowType = {
   supportPartsName: string;
   terminatedFlag: boolean;
   traceId?: string;
+  partsLabelName?: string;
+  partsAddInfo1?: string;
+  partsAddInfo2?: string;
+  partsAddInfo3?: string;
 };
 
 // 入力フォームの型定義(フォーム全体)
@@ -227,3 +236,23 @@ export type DqrSheetDataType = {
   preEmission: DqrSheetValueType;
   mainEmission: DqrSheetValueType;
 };
+
+export type UploadFileType =
+  | 'txt'
+  | 'csv'
+  | 'pdf'
+  | 'doc'
+  | 'docx'
+  | 'odt'
+  | 'ppt'
+  | 'pptx'
+  | 'odp'
+  | 'xls'
+  | 'xlsx'
+  | 'ods'
+  | 'jpeg'
+  | 'jpg'
+  | 'bmp'
+  | 'gif'
+  | 'png'
+  | 'zip';

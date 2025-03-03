@@ -1,11 +1,11 @@
-import { CfpSheetDataType, DqrSheetDataType, Parts, Plant } from '@/lib/types';
 import Card from '@/components/atoms/Card';
-import DetailInfo from '@/components/molecules/DetailInfo';
-import Divider from '@/components/atoms/Divider';
 import DisplayHyphen from '@/components/atoms/DisplayHyphen';
-import { isEmpty, formatNumber, sum } from '@/lib/utils';
-import { tv } from 'tailwind-variants';
+import Divider from '@/components/atoms/Divider';
+import DetailInfo from '@/components/molecules/DetailInfo';
+import { CfpSheetDataType, DqrSheetDataType, Parts, Plant } from '@/lib/types';
+import { formatNumber, isEmpty, sum } from '@/lib/utils';
 import { ReactNode } from 'react';
+import { tv } from 'tailwind-variants';
 
 const cfpValueGroupStyle = tv({
   base: 'pl-4 w-full flex flex-col gap-1',
@@ -75,7 +75,8 @@ export default function PartsWithCfpSheet({
         cfpData.preEmission.children,
         cfpData.mainEmission.parent,
         cfpData.mainEmission.children
-      )
+      ),
+      5
     )
     : 0;
   const plant = plants.find(({ plantId }) => plantId && plantId === partsData?.plantId);
@@ -184,7 +185,7 @@ export default function PartsWithCfpSheet({
                             sum(
                               cfpData.preEmission.parent,
                               cfpData.preEmission.children
-                            )
+                            ), 5
                           )
                           : 0}
                       </div>
@@ -195,7 +196,7 @@ export default function PartsWithCfpSheet({
                     <div className={emissionAndUnitStyle()}>
                       <div className={emissionStyle({ type: 'sub' })}>
                         {cfpData?.preEmission
-                          ? formatNumber(cfpData.preEmission.parent)
+                          ? formatNumber(cfpData.preEmission.parent, 5)
                           : 0}
                       </div>
                       <div className={unitStyle()}>
@@ -205,7 +206,7 @@ export default function PartsWithCfpSheet({
                     <div className={emissionAndUnitStyle()}>
                       <div className={emissionStyle({ type: 'sub' })}>
                         {cfpData?.preEmission
-                          ? formatNumber(cfpData.preEmission.children)
+                          ? formatNumber(cfpData.preEmission.children, 5)
                           : 0}
                       </div>
                       <div className={unitStyle()}>
@@ -232,7 +233,7 @@ export default function PartsWithCfpSheet({
                             sum(
                               cfpData.mainEmission.parent,
                               cfpData.mainEmission.children
-                            )
+                            ), 5
                           )
                           : 0}
                       </div>
@@ -243,7 +244,7 @@ export default function PartsWithCfpSheet({
                     <div className={emissionAndUnitStyle()}>
                       <div className={emissionStyle({ type: 'sub' })}>
                         {cfpData?.mainEmission
-                          ? formatNumber(cfpData.mainEmission.parent)
+                          ? formatNumber(cfpData.mainEmission.parent, 5)
                           : 0}
                       </div>
                       <div className={unitStyle()}>
@@ -253,7 +254,7 @@ export default function PartsWithCfpSheet({
                     <div className={emissionAndUnitStyle()}>
                       <div className={emissionStyle({ type: 'sub' })}>
                         {cfpData?.mainEmission
-                          ? formatNumber(cfpData.mainEmission.children)
+                          ? formatNumber(cfpData.mainEmission.children, 5)
                           : 0}
                       </div>
                       <div className={unitStyle()}>

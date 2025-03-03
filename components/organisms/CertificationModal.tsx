@@ -1,23 +1,24 @@
-import { X } from '@phosphor-icons/react/dist/ssr/X';
-import { CertificationDataType, Parts, Plant } from '@/lib/types';
-import { fileSizeToString, isEmpty, isOwnParts, sum } from '@/lib/utils';
+import { repository } from '@/api/repository';
 import BaseModal from '@/components/atoms/BaseModal';
 import { Button } from '@/components/atoms/Button';
+import InputTextArea from '@/components/atoms/InputTextArea';
+import RefreshButton from '@/components/atoms/RefreshButton';
+import FilePicker from '@/components/molecules/FilePicker';
 import FilesList from '@/components/molecules/FilesList';
+import PopupModal from '@/components/molecules/PopupModal';
 import SectionHeader from '@/components/molecules/SectionHeader';
 import CertificationPartsSheet from '@/components/organisms/CertificationPartsSheet';
-import { ComponentProps, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ACCEPTED_UPLOAD_CERT_FILE_EXT,
   MAX_CERT_COMMENT_NUM,
   UPLOAD_MAX_CERT_FILESIZE,
+  UPLOAD_MAX_CERT_FILE_NAME_NUM,
   UPLOAD_MAX_CERT_FILE_NUM,
 } from '@/lib/constants';
-import PopupModal from '@/components/molecules/PopupModal';
-import RefreshButton from '@/components/atoms/RefreshButton';
-import { repository } from '@/api/repository';
-import InputTextArea from '@/components/atoms/InputTextArea';
-import FilePicker from '@/components/molecules/FilePicker';
+import { CertificationDataType, Parts, Plant } from '@/lib/types';
+import { fileSizeToString, isEmpty, isOwnParts, sum } from '@/lib/utils';
+import { X } from '@phosphor-icons/react/dist/ssr/X';
+import { ComponentProps, useEffect, useMemo, useRef, useState } from 'react';
 
 type Props = {
   data?: {
@@ -41,6 +42,9 @@ type Props = {
     fileName: string,
     ...params: Parameters<typeof repository.downloadCfpCertificationFile>
   ) => Promise<void>;
+  onDeleteCert: (
+    ...params: Parameters<typeof repository.deleteCfpCertificationFile>
+  ) => Promise<boolean>;
 };
 
 export default function CertificationModal({
@@ -49,6 +53,7 @@ export default function CertificationModal({
   onModalRefresh,
   onUploadCert,
   onDownloadCert,
+  onDeleteCert,
 }: Props) {
   /* サプライヤ・自社証明書共通 */
   const type =
@@ -58,6 +63,11 @@ export default function CertificationModal({
   const [description, setDescription] = useState('');
   useEffect(() => {
     setDescription(data?.certification?.cfpCertificationDescription ?? '');
+  }, [data]);
+
+  const [hasHundredFiles, setHasHundredFiles] = useState(false);
+  useEffect(() => {
+    setHasHundredFiles((data?.certification?.cfpCertificationFileInfo.length ?? 0) === UPLOAD_MAX_CERT_FILE_NUM);
   }, [data]);
 
   function onClose() {
@@ -89,6 +99,8 @@ export default function CertificationModal({
 
   const [isFileExtensionErrorModalOpen, setIsFileExtensionErrorModalOpen] =
     useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteFileId, setDeleteFileId] = useState('');
 
   function addFiles(fileList: FileList | null) {
     if (fileList === null) return;
@@ -114,17 +126,28 @@ export default function CertificationModal({
     }
   }
 
-  function deleteFile(tmpFileId: string) {
-    setNewFiles(newFiles.filter((file) => file.tmpFileId !== tmpFileId));
+  function deleteFile() {
+    setNewFiles([]);
+
+  }
+
+  function deleteRegisteredFile(tmpFileId: string) {
+    setIsDeleteModalOpen(true);
+    setDeleteFileId(tmpFileId);
   }
 
   const filesAreValid = useMemo(() => {
-    // ファイル数チェック
-    if (newFiles.length > UPLOAD_MAX_CERT_FILE_NUM) return false;
     // ファイルサイズチェック
     if (
       sum(...newFiles.map((file) => file.fileObj.size)) >
       UPLOAD_MAX_CERT_FILESIZE
+    ) {
+      return false;
+    }
+    // ファイル名文字数チェック
+    if (
+      sum(...newFiles.map((file) => file.fileObj.name.length)) >
+      UPLOAD_MAX_CERT_FILE_NAME_NUM
     ) {
       return false;
     }
@@ -154,8 +177,22 @@ export default function CertificationModal({
         cfpCertificationDescription: isEmpty(description)
           ? undefined
           : description,
-        cfpCertificationFiles: newFiles.map((file) => file.fileObj),
+        cfpCertificationFileInfo: newFiles.map((file) => file.fileObj),
       })
+    ) {
+      setNewFiles([]);
+      setData(undefined);
+    }
+  }
+
+  async function onDelete() {
+    if (!data?.parts.traceId) return;
+    setIsDeleteModalOpen(false);
+    if (
+      await onDeleteCert(
+        data.parts.traceId,
+        deleteFileId
+      )
     ) {
       setNewFiles([]);
       setData(undefined);
@@ -208,8 +245,11 @@ export default function CertificationModal({
               <FilesList
                 files={data.certification?.cfpCertificationFileInfo ?? []}
                 placeHolder='該当ファイルはありません'
+                isEditable={(type === 'OWN' ? true : false)}
+                onDelete={deleteRegisteredFile}
                 onClickDownload={downloadFile}
                 emptyStateCustomPadding='pt-[52px] pb-7'
+                className={'overflow-auto ' + (type === 'OWN' ? 'max-h-[150px]' : 'max-h-[350px]')}
               />
             </div>
             {type === 'OWN' && (
@@ -218,12 +258,7 @@ export default function CertificationModal({
                   className='mb-2'
                   variant='h3'
                   align='bottom'
-                  title={
-                    (data.certification?.cfpCertificationFileInfo?.length ??
-                      0) > 0
-                      ? 'ファイルの置き換え'
-                      : 'ファイルの新規登録'
-                  }
+                  title={'ファイルの登録'}
                 />
                 <FilesList
                   files={newFiles.map((file) => ({
@@ -231,11 +266,23 @@ export default function CertificationModal({
                     fileName: file.fileObj.name,
                     size: fileSizeToString(file.fileObj.size),
                   }))}
-                  isEditable={true}
+                  isUpload={true}
                   onDelete={deleteFile}
                   className='mb-2'
                 />
-                <FilePicker onFilesAdded={handleFilesAdded} />
+                <div hidden={newFiles.length > 0 || hasHundredFiles}>
+                  <FilePicker onFilesAdded={handleFilesAdded} />
+                </div>
+                <div key='annotation'
+                  className='text-center text-error text-sm'
+                  hidden={!hasHundredFiles}>
+                  既に100件のファイルが登録されているため、新しいファイルを登録できません。
+                </div>
+                <div key='annotation'
+                  className='text-center text-error text-sm'
+                  hidden={filesAreValid}>
+                  アップロードできるファイルの最大サイズは100MB、ファイル名は100文字以内です。
+                </div>
               </div>
             )}
           </div>
@@ -244,37 +291,12 @@ export default function CertificationModal({
           >
             {type === 'OWN' ? (
               <>
-                <div>
-                  <Button
-                    onClick={() => setIsConfirmModalOpen(true)}
-                    disabled={!canSubmit}
-                  >
-                    {(data.certification?.cfpCertificationFileInfo.length ??
-                      0) > 0
-                      ? '置き換え'
-                      : '登録'}
-                  </Button>
-                  {filesAreValid ? (
-                    <div
-                      className='absolute pt-1 text-error text-sm'
-                      hidden={
-                        !canSubmit ||
-                        (data.certification?.cfpCertificationFileInfo.length ??
-                          0) === 0
-                      }
-                    >
-                      ボタンを押すと、登録済ファイルはすべて置き替えられます
-                    </div>
-                  ) : (
-                    <div
-                      key='annotation'
-                      className='absolute pt-1 text-error text-sm'
-                      hidden={filesAreValid}
-                    >
-                      登録できるファイルは10ファイル、合計6.6MBです。
-                    </div>
-                  )}
-                </div>
+                <Button
+                  onClick={() => setIsConfirmModalOpen(true)}
+                  disabled={!canSubmit}
+                >
+                  登録
+                </Button>
                 <Button onClick={onClose} variant='outline'>
                   キャンセル
                 </Button>
@@ -283,19 +305,8 @@ export default function CertificationModal({
               <Button onClick={onClose}>閉じる</Button>
             )}
           </div>
-          <input
-            type='file'
-            ref={fileInputRef}
-            accept={ACCEPTED_UPLOAD_CERT_FILE_EXT.join(',')}
-            onChange={(e) => {
-              addFiles(fileInputRef.current?.files ?? null);
-              e.target.value = '';
-            }}
-            multiple
-            hidden
-          />
         </div>
-      </BaseModal>
+      </BaseModal >
       <PopupModal
         button={
           <Button
@@ -322,6 +333,23 @@ export default function CertificationModal({
       >
         <p>ファイル形式をご確認ください。</p>
       </PopupModal>
+      <PopupModal
+        button={
+          <Button
+            color='primary'
+            variant='solid'
+            size='default'
+            key='submit'
+            type='submit'
+            onClick={onDelete}
+          >
+            削除
+          </Button>
+        }
+        isOpen={isDeleteModalOpen}
+        setIsOpen={setIsDeleteModalOpen}
+        title='選択したファイルを削除しますか？'
+      />
     </>
   ) : (
     <></>

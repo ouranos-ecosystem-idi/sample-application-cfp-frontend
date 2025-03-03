@@ -851,6 +851,7 @@ export interface paths {
      *   - エラーが発生した場合は紐づく依頼を取り下げてから再度実行してください。
      * - 部品に紐づく「CFP情報」・「CFP証明書情報」は削除されます。
      * - データ削除自体は非同期処理となるため、即時処理ではありません。
+     * - 部品削除後に同一のoperatorId, plantId, partsName, supportPartsNameの組み合わせで部品を登録すると、新たなtraceIdが発番されます。
      */
     delete: {
       parameters: {
@@ -1792,6 +1793,10 @@ export interface paths {
      * 使用するモデル：LoginInputModel
      *
      * 取得されるモデル：LoginOutputModel
+     *
+     * ### 本API利用上の注意点
+     *
+     * - ユーザーのログイン試行の失敗には上限があります。短時間でログイン試行に複数回失敗すると、ユーザーは一時的にアカウントにログインできなくなります。事象が発生した場合は、一定時間経過後にログイン試行いただき、解消しない場合は管理者にお問い合わせください。
      */
     post: {
       /** @description Request Body */
@@ -2015,7 +2020,7 @@ export interface components {
        * @description リフレッシュトークン
        * @example AMf-vBzFGeA7f_c1S8r2HKHkddm0qSSZPoIof2GHOS96QofUoiGepU1oG5o4CYT_YP6jzzZR4W1S4txBKNh2lz5lDzRXlR45r0Dr2VcI2nY0S6mdaT5vLBt9nMEBHweBu43CjrxZ1PV0ZMeyjx2EQlEkfnDEya9EG0B70Mtd4mFbsQNRFYZv0PsNaFrbs_kf-zCjBD5R0wIKPm3F_bQEHHy8MZZmpsD8LofFW_cTUrL5ztr_5XlDblyiOztn47nZaV5p02SPcX_-
        */
-      refreshToken?: string;
+      refreshToken: string;
     };
     "authentication.RefreshOutputModel": {
       /**
@@ -2032,7 +2037,7 @@ export interface components {
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00Z dataTarget:operator method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00.000Z dataTarget:operator method:GET
        */
       detail?: string;
       /**
@@ -2049,7 +2054,7 @@ export interface components {
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00Z dataTarget:operator method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00.000Z dataTarget:operator method:GET
        */
       detail?: string;
       /**
@@ -2066,7 +2071,7 @@ export interface components {
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00Z dataTarget:operator method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00.000Z dataTarget:operator method:GET
        */
       detail?: string;
       /**
@@ -2083,7 +2088,7 @@ export interface components {
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00Z dataTarget:operator method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6 timeStamp:2023-09-25T14:30:00.000Z dataTarget:operator method:GET
        */
       detail?: string;
       /**
@@ -2100,7 +2105,7 @@ export interface components {
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6, timeStamp:2023-09-25T14:30:00Z, dataTarget:operator, method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6, timeStamp:2023-09-25T14:30:00.000Z, dataTarget:operator, method:GET
        */
       detail?: string;
       /**
@@ -2117,7 +2122,7 @@ export interface components {
       code?: string;
       /**
        * @description 基盤運営事業者向け調査情報
-       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6, timeStamp:2023-09-25T14:30:00Z dataTarget:operator, method:GET
+       * @example id:d9a38406-cae2-4679-b052-15a75f5531e6, timeStamp:2023-09-25T14:30:00.000Z dataTarget:operator, method:GET
        */
       detail?: string;
       /**
@@ -2250,8 +2255,8 @@ export interface components {
        */
       operatorId: string;
       /**
-       * @description 部品項目
-       * @example PartsA-002123
+       * @description 部品項目 【v3.0.0 変更】
+       * @example A12345
        */
       partsName: string;
       /**
@@ -2261,7 +2266,7 @@ export interface components {
        */
       plantId: string;
       /**
-       * @description 補助項目
+       * @description 補助項目 【v3.0.0 変更】
        * @example modelA
        */
       supportPartsName: string | null;
@@ -2276,6 +2281,26 @@ export interface components {
        * @example d9a38406-cae2-4679-b052-15a75f5531e6
        */
       traceId: string | null;
+      /**
+       * @description 部品名称 【v3.0.0 追加項目】
+       * @example PartsA
+       */
+      partsLabelName?: string | null;
+      /**
+       * @description 部品補足情報1 【v3.0.0 追加項目】
+       * @example Ver2.0
+       */
+      partsAddInfo1?: string | null;
+      /**
+       * @description 部品補足情報2 【v3.0.0 追加項目】
+       * @example 2024-12-01-2024-12-31
+       */
+      partsAddInfo2?: string | null;
+      /**
+       * @description 部品補足情報3 【v3.0.0 追加項目】
+       * @example 任意の情報が入ります
+       */
+      partsAddInfo3?: string | null;
     };
     "traceability.PartsStructureModel": {
       /** @description 子部品情報 */
@@ -2319,12 +2344,12 @@ export interface components {
     };
     "traceability.StatusModel": {
       /**
-       * @description 依頼メッセージ
+       * @description 依頼メッセージ 【v2.0.0 変更】
        * @example 回答依頼時のメッセージが入ります
        */
       message: string | null;
       /**
-       * @description 差戻メッセージ
+       * @description 差戻メッセージ 【v2.0.0 変更】
        * @example 依頼差戻時のメッセージが入ります
        */
       replyMessage: string | null;
@@ -2334,12 +2359,12 @@ export interface components {
          * @description cfp回答ステータス
          * @enum {string}
          */
-        cfpResponseStatus: "NOT_COMPLETED" | "COMPLETED" | "REJECT" | "CANCEL";
+        cfpResponseStatus?: "NOT_COMPLETED" | "COMPLETED" | "REJECT" | "CANCEL";
         /**
          * @description 樹形図ステータス
          * @enum {string}
          */
-        tradeTreeStatus: "TERMINATED" | "UNTERMINATED";
+        tradeTreeStatus?: "TERMINATED" | "UNTERMINATED";
         /**
          * @description 回答完了数 【v2.0.0 追加項目】
          *
@@ -2452,26 +2477,26 @@ export interface components {
        * @example CFP証明書の説明が入ります
        */
       cfpCertificationDescription: string | null;
-      /** @description CFP証明書ファイル情報 */
+      /** @description CFP証明書ファイル情報 【v3.0.0 変更】 */
       cfpCertificationFileInfo: (({
-          /**
-           * Format: uuid
-           * @description 事業者識別子（内部）
-           * @example a1234567-1234-1234-1234-123456789012
-           */
-          operatorId?: string | null;
-          /**
-           * Format: uuid
-           * @description ファイル識別子
-           * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
-           */
-          fileId?: string | null;
-          /**
-           * @description ファイル名称
-           * @example filename.pdf
-           */
-          fileName?: string | null;
-        })[]) | null;
+        /**
+         * Format: uuid
+         * @description 事業者識別子（内部）
+         * @example a1234567-1234-1234-1234-123456789012
+         */
+        operatorId?: string | null;
+        /**
+         * Format: uuid
+         * @description ファイル識別子
+         * @example 5c07e3e9-c0e5-4a1f-b6a5-78145f7d1855
+         */
+        fileId?: string | null;
+        /**
+         * @description ファイル名称
+         * @example filename.pdf
+         */
+        fileName?: string | null;
+      })[]) | null;
     };
   };
   responses: never;

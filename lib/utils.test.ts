@@ -1,4 +1,6 @@
+import { renderHook, waitFor } from '@testing-library/react';
 import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import {
   AmountRequiredUnit,
   CfpUnits,
@@ -8,46 +10,44 @@ import {
   TradeRequestDataTypeWithOperator,
 } from './types';
 import {
-  zip,
   calcCfpSum,
+  calcDqrSum,
+  calcDqrValue,
+  calcDqrValues,
   classifyNotificationBySource,
+  convertFormNumberToNumber,
+  convertNullishToEmptyStr,
+  downloadCsv,
+  fileSizeToString,
+  formatNumber,
+  getCurrentDateTime,
+  getDuplicateMessage,
+  getDuplicatePartsIndexList,
   getFormikErrorMessage,
   getNotificationTypeName,
+  getPlantDetails,
   getRequestStatus,
   getResponseStatus,
   getTradeRequestStatusColor,
   getTradeRequestStatusName,
+  isDecimalPartDigitsWithin,
   isEmpty,
+  isIntegerPartDigitsWithin,
   isOwnParts,
-  roundUpSecondDecimalPlace,
+  isValidNumberString,
+  retryWithInterval,
+  returnErrorAsValue,
+  roundUpDecimalPlace,
   sanitizeUrl,
+  selectUnitFromAmountRequiredUnit,
   separateTradeRequestDataByRequestedStatus,
+  splitArrayIntoChunks,
   sum,
   sumDenyUndefined,
   tradeResponseStatusAttributes,
-  calcDqrValue,
-  calcDqrValues,
-  calcDqrSum,
-  splitArrayIntoChunks,
-  fileSizeToString,
-  returnErrorAsValue,
-  isValidNumberString,
-  retryWithInterval,
-  selectUnitFromAmountRequiredUnit,
-  formatNumber,
-  downloadCsv,
-  getPlantDetails,
-  getCurrentDateTime,
-  isIntegerPartDigitsWithin,
-  isDecimalPartDigitsWithin,
-  convertFormNumberToNumber,
-  convertNullishToEmptyStr,
-  getDuplicateMessage,
-  getDuplicatePartsIndexList,
   validatePartsDuplication,
+  zip,
 } from './utils';
-import { renderHook, waitFor } from '@testing-library/react';
-import * as Yup from 'yup';
 
 describe('sumDenyUndefined', () => {
   test('複数値', () => {
@@ -58,9 +58,7 @@ describe('sumDenyUndefined', () => {
 
   test('undefinedを含む', () => {
     expect(sumDenyUndefined(undefined)).toBeUndefined();
-
     expect(sumDenyUndefined(undefined, 1, 2)).toBeUndefined();
-
     expect(sumDenyUndefined(undefined, undefined)).toBeUndefined();
   });
 
@@ -73,17 +71,13 @@ describe('sumDenyUndefined', () => {
 describe('sum', () => {
   test('複数値の加算結果が返却される', () => {
     expect(sum(1)).toBe(1);
-
     expect(sum(1.1, 2.1)).toBe(3.2);
-
     expect(sum(1, 2, 3, 4)).toBe(10);
   });
 
   test('undefinedは0として扱われる', () => {
     expect(sum(undefined)).toBe(0);
-
     expect(sum(undefined, 1, 2)).toBe(3);
-
     expect(sum(undefined, undefined)).toBe(0);
   });
 
@@ -187,13 +181,11 @@ describe('calcDqrValue', () => {
       dqrValue: 2,
     },
   };
-  test('', () => {
-    expect(calcDqrValue(testData.targets, testData.parent)).toStrictEqual(
-      '2.2'
-    );
+  test('正常系', () => {
+    expect(calcDqrValue(testData.targets, testData.parent)).toStrictEqual('2.13226');
   });
 
-  test('', () => {
+  test('CFPの合計が0', () => {
     expect(calcDqrValue([], { emission: 0, dqrValue: 0 })).toStrictEqual('0');
   });
 });
@@ -242,10 +234,10 @@ describe('calcDqrValues', () => {
   };
   test('DQR値を計算する', () => {
     expect(calcDqrValues(testData.targets, testData.parent)).toStrictEqual({
-      TeR: '2.2',
-      TiR: '1.2',
-      GeR: '1.8',
-      dqr: '1.8',
+      TeR: '2.19355',
+      TiR: '1.14839',
+      GeR: '1.79355',
+      dqr: '1.71183',
     });
   });
 
@@ -292,10 +284,10 @@ describe('calcDqrValues', () => {
       },
     };
     expect(calcDqrValues(testData.targets, testData.parent)).toStrictEqual({
-      TeR: '1.9',
-      TiR: '1.4',
-      GeR: '1.5',
-      dqr: '1.6',
+      TeR: '1.87097',
+      TiR: '1.34194',
+      GeR: '1.4871',
+      dqr: '1.56667',
     });
   });
 });
@@ -353,15 +345,10 @@ describe('calcDqrSum', () => {
     ],
     parent: {},
   };
-  test('', () => {
+  test('正常系', () => {
     expect(calcDqrSum(testData.targets, testData.parent)).toStrictEqual({
-      preEmission: {
-        dqr: '2.3',
-        TeR: '3',
-        GeR: '2.2',
-        TiR: '1.5',
-      },
-      mainEmission: { dqr: '2.3', TeR: '3', GeR: '2.2', TiR: '1.5' },
+      preEmission: { dqr: '2.23334', TeR: '3', GeR: '2.2', TiR: '1.5', },
+      mainEmission: { dqr: '2.23334', TeR: '3', GeR: '2.2', TiR: '1.5' },
     });
   });
 });
@@ -695,10 +682,10 @@ describe('sanitizeUrl', () => {
 });
 
 describe('roundUpSecondDecimalPlace', () => {
-  test('小数第2位を切り上げられる', () => {
-    expect(roundUpSecondDecimalPlace(1)).toBe(1);
-    expect(roundUpSecondDecimalPlace(1.01)).toBe(1.1);
-    expect(roundUpSecondDecimalPlace(0.00000000001)).toBe(0.1);
+  test('指定された小数点から切り上げる', () => {
+    expect(roundUpDecimalPlace(1.0005)).toBe(1.1);
+    expect(roundUpDecimalPlace(1.0005, 2)).toBe(1.01);
+    expect(roundUpDecimalPlace(0.00000000001, 5)).toBe(0.00001);
   });
 });
 
@@ -718,6 +705,9 @@ describe('getNotificationTypeName', () => {
   test('CFP_UPDATEDはCFP回答変更', () => {
     expect(getNotificationTypeName('CFP_UPDATED')).toBe('CFP/DQR回答変更');
   });
+  test('REPLY_MESSAGE_REGISTEREDは応答メッセージ登録', () => {
+    expect(getNotificationTypeName('REPLY_MESSAGE_REGISTERED')).toBe('応答メッセージ登録');
+  });
 });
 
 describe('classifyNotificationBySource', () => {
@@ -735,6 +725,9 @@ describe('classifyNotificationBySource', () => {
   });
   test('REQUEST_CANCELEDは依頼元からの通知', () => {
     expect(classifyNotificationBySource('REQUEST_CANCELED')).toBe('requestor');
+  });
+  test('REPLY_MESSAGE_REGISTEREDは依頼元からの応答メッセージ', () => {
+    expect(classifyNotificationBySource('REPLY_MESSAGE_REGISTERED')).toBe('respondent');
   });
 });
 
