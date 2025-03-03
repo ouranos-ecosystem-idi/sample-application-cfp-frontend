@@ -83,11 +83,27 @@ const validationSchema = Yup.object({
     Yup.object({
       partsName: Yup.string().when('isDeleted', {
         is: (isDeleted: number) => !isDeleted,
-        then: (schema) => schema.required().max(20),
+        then: (schema) => schema.required().max(50),
       }),
       supportPartsName: Yup.string().when('isDeleted', {
         is: (isDeleted: boolean) => !isDeleted,
-        then: (schema) => schema.max(10),
+        then: (schema) => schema.max(50),
+      }),
+      partsLabelName: Yup.string().when('isDeleted', {
+        is: (isDeleted: number) => !isDeleted,
+        then: (schema) => schema.required().max(50),
+      }),
+      partsAddInfo1: Yup.string().when('isDeleted', {
+        is: (isDeleted: boolean) => !isDeleted,
+        then: (schema) => schema.max(50),
+      }),
+      partsAddInfo2: Yup.string().when('isDeleted', {
+        is: (isDeleted: boolean) => !isDeleted,
+        then: (schema) => schema.max(50),
+      }),
+      partsAddInfo3: Yup.string().when('isDeleted', {
+        is: (isDeleted: boolean) => !isDeleted,
+        then: (schema) => schema.max(50),
       }),
       plantId: Yup.string().when('isDeleted', {
         is: (isDeleted: boolean) => !isDeleted,
@@ -191,7 +207,7 @@ export default function PartsDetail({
       {
         id: 'level',
         headerElement: 'レベル',
-        width: 36,
+        width: 46,
         justify: 'center',
         renderCell: (value) => <LevelIcon level={value} />,
       },
@@ -241,6 +257,82 @@ export default function PartsDetail({
             <span className='text-sm font-semibold break-all'>{value}</span>
           );
         },
+      },
+      {
+        id: 'partsLabelName',
+        headerElement: '部品名称',
+        width: 172,
+        renderCell: (value, row, rowIndex) => {
+          return (
+            <InputTextBox
+              background='transparent'
+              disabled={row.isDeleted!}
+              type='text'
+              {...formik.getFieldProps(`data[${rowIndex}][partsLabelName]`)}
+              error={getFormikErrorMessage({
+                name: `data[${rowIndex}][partsLabelName]`,
+                formik,
+              })}
+            />
+          );
+        }
+      },
+      {
+        id: 'partsAddInfo1',
+        headerElement: 'CFP算出バージョン',
+        width: 172,
+        renderCell: (value, row, rowIndex) => {
+          return (
+            <InputTextBox
+              background='transparent'
+              disabled={row.isDeleted!}
+              type='text'
+              {...formik.getFieldProps(`data[${rowIndex}][partsAddInfo1]`)}
+              error={getFormikErrorMessage({
+                name: `data[${rowIndex}][partsAddInfo1]`,
+                formik,
+              })}
+            />
+          );
+        }
+      },
+      {
+        id: 'partsAddInfo2',
+        headerElement: 'CFP算出期間',
+        width: 172,
+        renderCell: (value, row, rowIndex) => {
+          return (
+            <InputTextBox
+              background='transparent'
+              disabled={row.isDeleted!}
+              type='text'
+              {...formik.getFieldProps(`data[${rowIndex}][partsAddInfo2]`)}
+              error={getFormikErrorMessage({
+                name: `data[${rowIndex}][partsAddInfo2]`,
+                formik,
+              })}
+            />
+          );
+        }
+      },
+      {
+        id: 'partsAddInfo3',
+        headerElement: '任意項目',
+        width: 172,
+        renderCell: (value, row, rowIndex) => {
+          return (
+            <InputTextBox
+              background='transparent'
+              disabled={row.isDeleted!}
+              type='text'
+              {...formik.getFieldProps(`data[${rowIndex}][partsAddInfo3]`)}
+              error={getFormikErrorMessage({
+                name: `data[${rowIndex}][partsAddInfo3]`,
+                formik,
+              })}
+            />
+          );
+        }
       },
       {
         id: 'plantId',
@@ -349,7 +441,7 @@ export default function PartsDetail({
       {
         id: 'terminatedFlag',
         headerElement: <span>{'終端'}</span>,
-        width: 24,
+        width: 33,
         justify: 'center',
         renderCell: (_, row, rowIndex) => (
           <CheckBox
@@ -369,6 +461,7 @@ export default function PartsDetail({
         id: 'isDeleted',
         headerElement: <span></span>,
         width: 28,
+        justify: 'end',
         renderCell: (_, row, rowIndex) => {
           if (row.level === undefined || row.level === 1) {
             return <div></div>;
@@ -377,8 +470,8 @@ export default function PartsDetail({
             return (
               <ArrowCounterClockwise
                 weight='bold'
-                className='fill-primary'
-                size='28'
+                className='fill-primary cursor-pointer'
+                size='24'
                 onClick={() => {
                   formik.setFieldValue(`data[${rowIndex}].isDeleted`, false);
                 }}
@@ -387,8 +480,8 @@ export default function PartsDetail({
           }
           return (
             <MinusCircle
-              className='fill-error'
-              size='28'
+              className='fill-error cursor-pointer'
+              size='24'
               onClick={() => {
                 formik.setFieldValue(`data[${rowIndex}].isDeleted`, true);
               }}
@@ -429,13 +522,13 @@ export default function PartsDetail({
                 削除
               </Button>,
               <Button
-              key='confirm'
-              type='button'
-              onClick={onClickConfirm}
-              disabled={!(formik.isValid && formik.dirty)}
-            >
-              確定
-            </Button>,
+                key='confirm'
+                type='button'
+                onClick={onClickConfirm}
+                disabled={!(formik.isValid && formik.dirty)}
+              >
+                確定
+              </Button>,
             ]}
             className='mb-4'
           />
@@ -447,8 +540,10 @@ export default function PartsDetail({
             keyOfDeletedID='isDeleted'
             columnsGapX={8}
             edgePaddingX={16}
-            stickyOptions={{ top: 116 }}
+            stickyOptions={{ top: 0, beforeHeight: 'h-96' }}
             isLoading={isPartsLoading}
+            className='overflow-auto max-h-[700px]'
+            tableWidth={1760}
           />
           <AddRowButton
             hasBorder={false}
@@ -475,6 +570,7 @@ export default function PartsDetail({
                 ],
               });
             }}
+            className='w-full pr-4 flex-row-reverse '
           />
           <div className='pt-5' />
         </div>

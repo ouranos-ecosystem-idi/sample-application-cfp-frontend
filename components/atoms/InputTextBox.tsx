@@ -74,7 +74,7 @@ function _InputTextBox({
   };
 
   return (
-    <div className='w-full'>
+    <div className='w-full relative'>
       <input
         className={
           inputTextBoxTv({
@@ -84,7 +84,7 @@ function _InputTextBox({
             error: !isEmpty(error),
           }) +
           ' placeholder-neutral ' +
-          className ?? ''
+          className
         }
         readOnly={disabled}
         // input type=numberの場合ブラウザ独自のUIを出さないようtextに上書き

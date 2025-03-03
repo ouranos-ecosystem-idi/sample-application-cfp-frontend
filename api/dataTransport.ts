@@ -1,19 +1,19 @@
-import { paths } from '@/api/schemas/dataTransport';
 import { getAccessToken } from '@/api/accessToken';
-import { UnionToIntersection, Get } from 'type-fest';
+import { DataTransportAPIError } from '@/api/apiErrors';
 import {
+  CfpCertificationModel,
+  CfpModel,
   DataTransportApiErrorModels,
   PartsStructureModel,
-  TradeRequestModel,
-  CfpModel,
-  StatusModel,
   PlantModel,
-  CfpCertificationModel,
+  StatusModel,
+  TradeRequestModel,
 } from '@/api/models/dataTransport';
-import { DataTransportAPIError } from '@/api/apiErrors';
-import { splitArrayIntoChunks } from '@/lib/utils';
 import { NetworkError } from '@/api/networkErrors';
+import { paths } from '@/api/schemas/dataTransport';
 import { getSignal } from '@/components/template/AbortHandler';
+import { splitArrayIntoChunks } from '@/lib/utils';
+import { Get, UnionToIntersection } from 'type-fest';
 
 type UrlPaths = keyof paths;
 
@@ -231,7 +231,8 @@ export const dataTransportApiClient = {
       status: '204',
     });
   },
-  // # 6 部品構成情報一覧更新
+
+  // #6 部品構成情報一覧更新
   async putPartsStructure(req: PartsStructureModel) {
     const { res } = await fetchFromDataTransport({
       url: '/api/v1/datatransport?dataTarget=partsStructure',

@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import {
-  PartsWithCfpDataType,
-  TradeRequestDataType,
-  Operator,
-  Plant,
   CertificationDataType,
+  Operator,
   Parts,
+  PartsWithCfpDataType,
+  Plant,
+  TradeRequestDataType,
 } from '@/lib/types';
+import type { Meta, StoryObj } from '@storybook/react';
 import CfpRegisterTable from './CfpRegisterTable';
 
 const meta = {
@@ -310,6 +310,7 @@ export const Primary: Story = {
       return new Promise(() => { });
     },
     onUploadCert: () => new Promise((resolve) => resolve(true)),
+    onDeleteCert: () => new Promise((resolve) => resolve(true)),
     onDownloadCert: () => new Promise((resolve) => resolve()),
     isCertsLoading: false,
     isCfpDataLoading: false,

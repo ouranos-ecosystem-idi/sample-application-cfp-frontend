@@ -1,47 +1,47 @@
 'use client';
-import { useAlert } from '@/components/template/AlertHandler';
-import {
-  convertFormNumberToNumber,
-  downloadCsv,
-  getCurrentDateTime,
-  getPlantDetails,
-  getTradeRequestStatusName,
-  formatNumber,
-  selectUnitFromAmountRequiredUnit,
-  sum,
-  convertNullishToEmptyStr,
-  getRequestStatus,
-  isOwnParts,
-} from '@/lib/utils';
+import { APIError } from '@/api/apiErrors';
+import { NetworkError } from '@/api/networkErrors';
 import { repository } from '@/api/repository';
-import useErrorHandler from '@/components/template/ErrorHandler';
 import BackButton from '@/components/atoms/BackButton';
 import { Button } from '@/components/atoms/Button';
+import RefreshButton from '@/components/atoms/RefreshButton';
+import LoadingScreen from '@/components/molecules/LoadingScreen';
 import SectionHeader from '@/components/molecules/SectionHeader';
+import CertificationModal from '@/components/organisms/CertificationModal';
 import CfpRegisterTable, {
   FormType,
 } from '@/components/organisms/CfpRegisterTable';
 import PartsWithCfpSheet from '@/components/organisms/PartsWithCfpSheet';
+import { useAlert } from '@/components/template/AlertHandler';
+import useErrorHandler from '@/components/template/ErrorHandler';
 import Template from '@/components/template/Template';
+import { sheetCsvHeaders, tableCsvHeaders } from '@/lib/constants';
+import { getPlants, setPlants as refreshPlants } from '@/lib/plantSessionUtils';
 import {
-  PartsWithCfpDataType,
-  TradeRequestDataType,
-  Operator,
-  Plant,
   CertificationDataType,
   CfpSheetDataType,
   DqrSheetDataType,
+  Operator,
   Parts,
+  PartsWithCfpDataType,
+  Plant,
+  TradeRequestDataType,
 } from '@/lib/types';
-import { useSearchParams, useRouter } from 'next/navigation';
+import {
+  convertFormNumberToNumber,
+  convertNullishToEmptyStr,
+  downloadCsv,
+  formatNumber,
+  getCurrentDateTime,
+  getPlantDetails,
+  getRequestStatus,
+  getTradeRequestStatusName,
+  isOwnParts,
+  selectUnitFromAmountRequiredUnit,
+  sum,
+} from '@/lib/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ComponentProps, useCallback, useEffect, useState } from 'react';
-import { getPlants, setPlants as refreshPlants } from '@/lib/plantSessionUtils';
-import RefreshButton from '@/components/atoms/RefreshButton';
-import CertificationModal from '@/components/organisms/CertificationModal';
-import { sheetCsvHeaders, tableCsvHeaders } from '@/lib/constants';
-import { APIError } from '@/api/apiErrors';
-import { NetworkError } from '@/api/networkErrors';
-import LoadingScreen from '@/components/molecules/LoadingScreen';
 
 export default function PartsRegisterCfpPage() {
   const handleError = useErrorHandler();
@@ -223,10 +223,9 @@ export default function PartsRegisterCfpPage() {
       async (data) => {
         setIsLoading(true);
         try {
+          // 証明書データの登録
           await repository.registerCfpCertifications(data);
-          setIsLoading(false);
-          showAlert.info('証明書の登録を申請しました。');
-
+          // 古くなった証明書データを新しいデータに更新
           const newCert = await repository.getCfpCertification(data.traceId);
           const oldCerts = certifications.filter(
             (cert) => cert.traceId !== data.traceId
@@ -236,6 +235,8 @@ export default function PartsRegisterCfpPage() {
           } else {
             setCertifications([newCert, ...oldCerts]);
           }
+          setIsLoading(false);
+          showAlert.info('証明書の登録を申請しました。');
           return true;
         } catch (e) {
           setIsLoading(false);
@@ -256,14 +257,14 @@ export default function PartsRegisterCfpPage() {
     downloadType
   ) => {
       try {
-        const blob = await repository.downloadCfpCertificationFile(
+        const Url = await repository.downloadCfpCertificationFile(
           fileId,
           fileOperatorId,
           cfpCertificationId,
           downloadType
         );
         const downloadTag = document.createElement('a');
-        downloadTag.href = URL.createObjectURL(blob);
+        downloadTag.href = Url;
         downloadTag.download = fileName;
         downloadTag.click();
         showAlert.info('ダウンロードを開始しました。');
@@ -273,6 +274,34 @@ export default function PartsRegisterCfpPage() {
         showAlert.error('証明書のダウンロードに失敗しました。');
       }
     };
+
+  const onDeleteCert: ComponentProps<typeof CfpRegisterTable>['onDeleteCert'] = useCallback(
+    async (traceId: string, fileId: string) => {
+      setIsLoading(true);
+      try {
+        // 証明書データの削除
+        await repository.deleteCfpCertificationFile(traceId, fileId);
+        // 証明書データを更新
+        const newCert = await repository.getCfpCertification(traceId);
+        const oldCerts = certifications.filter(
+          (cert) => cert.traceId !== traceId
+        );
+        if (newCert === undefined) {
+          setCertifications(oldCerts);
+        } else {
+          setCertifications([newCert, ...oldCerts]);
+        }
+        setIsLoading(false);
+        showAlert.info('証明書の削除を申請しました。');
+        return true;
+      } catch (e) {
+        setIsLoading(false);
+        handleError(e);
+        return false;
+      }
+    },
+    [certifications, handleError, showAlert]
+  );
 
   // シート情報をCSV形式の文字列に変換する関数
   function prepareSheetCsvData() {
@@ -522,6 +551,7 @@ export default function PartsRegisterCfpPage() {
             onSubmit={onSubmit}
             onUploadCert={onUploadCert}
             onDownloadCert={onDownloadCert}
+            onDeleteCert={onDeleteCert}
             operatorsData={operatorsData}
             onModalRefresh={onModalRefresh}
             getFormData={getFormDataFromTable}

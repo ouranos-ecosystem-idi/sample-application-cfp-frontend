@@ -1,22 +1,4 @@
-import {
-  Operator,
-  CfpDataType,
-  PartsFormRowType,
-  PartsFormType,
-  PartsWithCfpDataType,
-  TradeResponseDataType,
-  Plant,
-  CertificationDataType,
-  PartsWithoutLevel,
-  TradeRequestDataType,
-  Parts,
-  PartsStructure,
-  PartLevel,
-  NotificationDataType,
-  TradeStatus
-} from '@/lib/types';
-import { getRequestStatus, getResponseStatus } from '@/lib/utils';
-import { CfpRequestFormRowType } from '@/components/organisms/CfpRequestTable';
+import { getOperatorId } from '@/api/accessToken';
 import {
   CfpCertificationModel,
   CfpModel,
@@ -29,7 +11,27 @@ import {
   TradeRequestModel,
   TradeResponseModel,
 } from '@/api/models/dataTransport';
-import { NotificationModel } from '@/api/models/traceability';
+import { FileUploadUrlPostRequest, NotificationModel } from '@/api/models/traceability';
+import { CfpRequestFormRowType } from '@/components/organisms/CfpRequestTable';
+import {
+  CertificationDataType,
+  CfpDataType,
+  NotificationDataType,
+  Operator,
+  PartLevel,
+  Parts,
+  PartsFormRowType,
+  PartsFormType,
+  PartsStructure,
+  PartsWithCfpDataType,
+  PartsWithoutLevel,
+  Plant,
+  TradeRequestDataType,
+  TradeResponseDataType,
+  TradeStatus,
+  UploadFileType
+} from '@/lib/types';
+import { getResponseStatus, isEmpty } from '@/lib/utils';
 
 export function convertPartsModelToPartsWithoutLevel(
   parts: PartsModel
@@ -37,9 +39,13 @@ export function convertPartsModelToPartsWithoutLevel(
   return {
     ...parts,
     amountRequiredUnit: parts.amountRequiredUnit ?? undefined,
-    partsName: parts.partsName ?? '',
+    partsName: parts.partsName,
     supportPartsName: parts.supportPartsName ?? '',
     traceId: parts.traceId ?? undefined,
+    partsLabelName: parts.partsLabelName ?? undefined,
+    partsAddInfo1: parts.partsAddInfo1 ?? undefined,
+    partsAddInfo2: parts.partsAddInfo2 ?? undefined,
+    partsAddInfo3: parts.partsAddInfo3 ?? undefined,
   };
 }
 
@@ -82,6 +88,10 @@ export function convertPartsFormTypeToPartsStructure(
       supportPartsName: data.supportPartsName,
       terminatedFlag: data.terminatedFlag,
       traceId: data.traceId,
+      partsLabelName: data.partsLabelName,
+      partsAddInfo1: data.partsAddInfo1,
+      partsAddInfo2: data.partsAddInfo2,
+      partsAddInfo3: data.partsAddInfo3,
     };
   }
   return {
@@ -100,6 +110,10 @@ export function convertPartsToPartsModel(parts: Parts): PartsModel {
     supportPartsName: parts.supportPartsName,
     terminatedFlag: parts.terminatedFlag,
     traceId: parts.traceId ?? null,
+    partsLabelName: parts.partsLabelName,
+    partsAddInfo1: parts.partsAddInfo1,
+    partsAddInfo2: parts.partsAddInfo2,
+    partsAddInfo3: parts.partsAddInfo3
   };
 }
 
@@ -139,8 +153,8 @@ export function convertStatusModelToTradeStatus(
 ): TradeStatus {
   return {
     requestStatus: {
-      cfpResponseStatus: status.requestStatus.cfpResponseStatus,
-      tradeTreeStatus: status.requestStatus.tradeTreeStatus,
+      cfpResponseStatus: status.requestStatus.cfpResponseStatus!,
+      tradeTreeStatus: status.requestStatus.tradeTreeStatus!,
       completedCount: status.requestStatus.completedCount ?? undefined,
       completedCountModifiedAt: status.requestStatus.completedCountModifiedAt ?? undefined,
       tradesCount: status.requestStatus.tradesCount ?? undefined,
@@ -170,13 +184,13 @@ export function convertTradeResponseModelToTradeResponseDataType(
     downstreamTraceId: tradeResponse.tradeModel.downstreamTraceId,
     statusId: tradeResponse.statusModel.statusId ?? undefined,
     status: getResponseStatus(
-      tradeResponse.statusModel.requestStatus.cfpResponseStatus,
+      tradeResponse.statusModel.requestStatus.cfpResponseStatus!,
     ),
     message: tradeResponse.statusModel.message ?? undefined,
     downstreamPart: convertPartsModelToPartsWithoutLevel(
       tradeResponse.partsModel
     ),
-    tradeTreeStatus: tradeResponse.statusModel.requestStatus.tradeTreeStatus,
+    tradeTreeStatus: tradeResponse.statusModel.requestStatus.tradeTreeStatus!,
     responseDueDate: tradeResponse.statusModel.responseDueDate ?? undefined,
   };
 }
@@ -347,6 +361,7 @@ export function convertTradeResponseDataTypeToRejectStatusModel(
     tradeId: tradeResponseData.tradeId ?? null,
   };
 }
+
 export function convertPlantModelToPlant(model: PlantModel): Plant {
   return {
     plantId: model.plantId === null ? undefined : model.plantId,
@@ -361,23 +376,17 @@ export function convertPlantToPlantModel(
   plantRegisterForm: Plant,
   operatorId: string
 ): PlantModel {
-  const hasGlobalPlantId =
-    plantRegisterForm.globalPlantId !== undefined &&
-    plantRegisterForm.globalPlantId !== null;
-
   return {
     openPlantId: plantRegisterForm.openPlantId,
     operatorId: operatorId as string,
     plantAddress: plantRegisterForm.plantAddress ?? '',
     plantId: plantRegisterForm.plantId ?? null,
     plantName: plantRegisterForm.plantName,
-    plantAttribute: hasGlobalPlantId
-      ? {
-        globalPlantId: plantRegisterForm.globalPlantId,
-      }
-      : {},
+    plantAttribute: isEmpty(plantRegisterForm.globalPlantId)
+      ? {} : { globalPlantId: plantRegisterForm.globalPlantId, },
   };
 }
+
 export function convertCfpCertificationModelToCfpCertification(
   linkedTraceId: string,
   model: CfpCertificationModel | undefined
@@ -395,5 +404,26 @@ export function convertCfpCertificationModelToCfpCertification(
         fileId: m.fileId!,
         fileName: m.fileName!,
       })) ?? [],
+  };
+}
+
+function convertToUploadFileType(input: string): UploadFileType {
+  const uploadFileTypes: UploadFileType[] = ['txt', 'csv', 'pdf', 'doc', 'docx', 'odt', 'ppt', 'pptx', 'odp', 'xls', 'xlsx', 'ods', 'jpeg', 'jpg', 'bmp', 'gif', 'png', 'zip'];
+  const match = uploadFileTypes.find(type => input.toLowerCase().endsWith(`.${type}`));
+  return match!;
+}
+
+export function convertCertificationInfoToFileUploadUrlPostRequest(data: {
+  traceId: string;
+  cfpCertificationId?: string;
+  cfpCertificationDescription?: string;
+  cfpCertificationFileInfo: File[];
+}): FileUploadUrlPostRequest {
+  return {
+    operatorId: getOperatorId(),
+    fileInfo: data.cfpCertificationFileInfo.map((m) => ({
+      fileName: m.name,
+      extension: convertToUploadFileType(m.name)!
+    }))
   };
 }

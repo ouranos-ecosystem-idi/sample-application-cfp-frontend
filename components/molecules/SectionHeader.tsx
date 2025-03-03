@@ -36,7 +36,7 @@ export default function SectionHeader({
     ? {
       position: 'sticky',
       top: stickyOptions.top,
-      zIndex: 30,
+      zIndex: 25,
     }
     : {};
   return (

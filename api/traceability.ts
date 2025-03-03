@@ -1,10 +1,10 @@
-import { paths } from '@/api/schemas/traceability';
 import { getAccessToken } from '@/api/accessToken';
-import { UnionToIntersection, Get } from 'type-fest';
-import { TraceabilityApiErrorModel } from '@/api/models/traceability';
 import { traceabilityAPIError } from '@/api/apiErrors';
+import { FileUploadUrlPostRequest, ReplyMessagesPostRequest, TraceabilityApiErrorModel } from '@/api/models/traceability';
 import { NetworkError } from '@/api/networkErrors';
+import { paths } from '@/api/schemas/traceability';
 import { getSignal } from '@/components/template/AbortHandler';
+import { Get, UnionToIntersection } from 'type-fest';
 
 type UrlPaths = keyof paths;
 
@@ -216,50 +216,135 @@ export const traceabilityApiClient = {
     return res;
   },
 
+  // 【応答メッセージ登録API】
+  async updateReplyMessage(data: ReplyMessagesPostRequest) {
+    await fetchFromTraceability({
+      url: '/replyMessages',
+      method: 'post',
+      data: data,
+      status: '200'
+    });
+  },
+
+  // 【ファイルアップロード用URL取得API】
+  async getUploadUrl(data: FileUploadUrlPostRequest) {
+    const { res } = await fetchFromTraceability({
+      url: '/fileUploadUrl',
+      method: 'post',
+      data: data,
+      status: '200',
+    });
+    return res;
+  },
+
+  // 【ファイルアップロード用キー取得API】
+  async getUploadUrlKey() {
+    let res: Response;
+    let baseURL = '';
+    if (TRACEABILITY_API_BASE_URL) {
+      baseURL = TRACEABILITY_API_BASE_URL.replace(/(.+)\/$/, '$1');
+    }
+    try {
+      res = await fetch(baseURL.concat('/keyId?'), {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'xhr',
+          Authorization: `Bearer ${await getAccessToken()}`,
+          'x-api-key':
+            TRACEABILITY_API_BASE_URL && TRACEABILITY_API_KEY
+              ? TRACEABILITY_API_KEY
+              : '',
+          'Content-Type': 'application/json',
+        }
+      });
+    } catch (e) {
+      // ネットワークエラー
+      if (e instanceof TypeError) {
+        throw new NetworkError(e.message);
+      }
+      // その他のエラー
+      throw e;
+    }
+    return res.text();
+  },
+
+  // 【ファイルアップロードAPI】
+  async postFileUpload(url: keyof paths, cfpCertificationFileInfo: File[], keyId: string) {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'PUT',
+        body: cfpCertificationFileInfo[0],
+        headers: {
+          'Content-Type': cfpCertificationFileInfo[0].type,
+          'x-amz-server-side-encryption': 'aws:kms',
+          'x-amz-server-side-encryption-aws-kms-key-id': keyId,
+        },
+      });
+    } catch (e) {
+      // ネットワークエラー
+      if (e instanceof TypeError) {
+        throw new NetworkError(e.message);
+      }
+      // その他のエラー
+      throw e;
+    }
+    // APIエラーハンドリング
+    if (res && !res.ok) {
+      const body = (await res.json()) as TraceabilityApiErrorModel;
+      throw new traceabilityAPIError(res.status, body);
+    }
+    return res;
+  },
+
   // 【CFP証明書登録API】
   async postCfpCertifications(data: {
     operatorId: string;
-    traceId: string;
     cfpCertificationId?: string;
+    traceId: string;
     cfpCertificationDescription?: string;
-    cfpCertificationFiles: File[];
+    cfpCertificationFileInfo: {
+      fileId: string,
+      fileName: string;
+    }[];
   }) {
-    const form = new FormData();
-    form.append('operatorId', data.operatorId);
-    form.append('traceId', data.traceId);
-    if (data.cfpCertificationId !== undefined) {
-      form.append('cfpCertificationId', data.cfpCertificationId);
-    }
-    if (data.cfpCertificationDescription !== undefined) {
-      form.append(
-        'cfpCertificationDescription',
-        data.cfpCertificationDescription
-      );
-    }
-    data.cfpCertificationFiles.map((file) => {
-      form.append('cfpCertificationFiles', file);
-    });
     const { status } = await fetchFromTraceability({
-      url: '/cfpCertifications',
+      url: '/cfpCertificationInfo',
       method: 'post',
-      body: form,
+      status: '200',
+      data: data
     });
     return status;
   },
 
-  // 【CFP証明書ファイルダウンロードAPI】
-  async getCfpCertificationFiles(data: {
+  // 【ファイルダウンロード用URL取得API】
+  async getDownloadUrl(data: {
     operatorId: string;
     fileOperatorId: string;
     fileId: string;
     downloadType: 'OWN' | 'OTHER';
     cfpCertificationId: string;
   }) {
-    const { res } = await rawFetchFromTraceability({
-      url: '/cfpCertificationFiles',
+    const { res } = await fetchFromTraceability({
+      url: '/fileDownloadUrl',
       method: 'get',
       params: data,
+      status: '200',
     });
-    return (await res.blob()).text(); // utf-8でstringにする
+    return res;
+  },
+
+  // 【CFP証明書削除API】
+  async deleteCfpCertificationFile(data: {
+    operatorId: string;
+    traceId: string;
+    fileId: string;
+  }) {
+    await rawFetchFromTraceability({
+      url: '/cfpCertifications',
+      method: 'delete',
+      params: data,
+      status: '200'
+    });
   },
 };

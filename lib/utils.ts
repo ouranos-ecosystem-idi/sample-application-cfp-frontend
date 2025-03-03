@@ -1,19 +1,19 @@
 import { StatusBadgeColors } from '@/components/atoms/StatusBadge';
 import {
+  AmountRequiredUnit,
+  CfpResponseStatusType,
+  CfpUnits,
+  DqrSheetDataType,
+  DqrSheetValueType,
   DqrValueType,
   NotificationTypes,
-  TradeRequestDataTypeWithOperator,
   Parts,
+  PartsStructure,
+  Plant,
+  TradeRequestDataTypeWithOperator,
   TradeRequestStatusType,
   TradeResponseStatusType,
-  CfpUnits,
-  Plant,
-  DqrSheetValueType,
-  DqrSheetDataType,
-  PartsStructure,
-  AmountRequiredUnit,
   TradeStatus,
-  CfpResponseStatusType,
 } from '@/lib/types';
 
 import Decimal from 'decimal.js';
@@ -93,10 +93,10 @@ export function calcDqrValue(
   }
 ): string {
   const cfpList = [
-    ...targets.map((target) => target.emission * target.amountRequired),
+    ...targets.map((target) => new Decimal(target.emission).mul(target.amountRequired).toNumber()),
     parent.emission,
   ];
-  const cfpSum = cfpList.reduce((sum, dqrValue) => (sum += dqrValue), 0);
+  const cfpSum = cfpList.reduce((sum, dqrValue) => (new Decimal(sum).add(dqrValue).toNumber()), 0);
   if (cfpSum === 0) return '0';
 
   const dqrValueList = [
@@ -107,9 +107,10 @@ export function calcDqrValue(
   ];
 
   return formatNumber(
-    new Decimal(dqrValueList.reduce((sum, dqrValue) => (sum += dqrValue), 0))
+    new Decimal(dqrValueList.reduce((sum, dqrValue) => (new Decimal(sum).add(dqrValue).toNumber()), 0))
       .div(cfpSum)
       .toNumber()
+    , 5
   );
 }
 
@@ -158,7 +159,7 @@ export function calcDqrValues(
   );
 
   const dqr = formatNumber(
-    new Decimal(TeR).plus(GeR).plus(TiR).div(3).toNumber()
+    new Decimal(TeR).plus(GeR).plus(TiR).div(3).toNumber(), 5
   );
 
   return {
@@ -404,12 +405,13 @@ export function sanitizeUrl(value: string) {
 }
 
 /**
- * 小数第2位を切り上げる。
+ * 指定された小数点から切り上げる。
  * @param num 切り上げ対象の値
+ * @param roundUpNum 切り上げる小数点の位置
  * @returns 計算結果
  */
-export function roundUpSecondDecimalPlace(num: number): number {
-  return new Decimal(num).toDecimalPlaces(1, Decimal.ROUND_UP).toNumber();
+export function roundUpDecimalPlace(num: number, roundUpNum?: number): number {
+  return new Decimal(num).toDecimalPlaces(roundUpNum ?? 1, Decimal.ROUND_UP).toNumber();
 }
 
 /**
@@ -426,6 +428,7 @@ export function getNotificationTypeName(notificationType: NotificationTypes) {
     REQUEST_REJECTED: '依頼差戻',
     CFP_RESPONSED: 'CFP/DQR回答',
     CFP_UPDATED: 'CFP/DQR回答変更',
+    REPLY_MESSAGE_REGISTERED: '応答メッセージ登録'
   };
   return map[notificationType];
 }
@@ -446,6 +449,7 @@ export function classifyNotificationBySource(
     REQUEST_REJECTED: 'respondent',
     REQUEST_NEW: 'requestor',
     REQUEST_CANCELED: 'requestor',
+    REPLY_MESSAGE_REGISTERED: 'respondent'
   };
   return map[notificationType];
 }
@@ -544,7 +548,7 @@ export function fileSizeToString(size: number) {
       prefix = 'M';
       break;
   }
-  return `${roundUpSecondDecimalPlace(mantissa)} ${prefix}B`;
+  return `${roundUpDecimalPlace(mantissa)} ${prefix}B`;
 }
 
 /**
@@ -639,10 +643,12 @@ export function selectUnitFromAmountRequiredUnit(
 /**
  * 小数点以下または整数でフォーマットする。
  * @param value フォーマット対象の文字列
+ * @param roundUpNumber 残す小数点の数
  * @returns フォーマット後の文字列
  */
-export function formatNumber(value: number): string {
-  const rounded = roundUpSecondDecimalPlace(value);
+export function formatNumber(value: number, roundUpNumber?: number): string {
+  // roundUpNumberに指定がない場合は1を設定する
+  const rounded = roundUpDecimalPlace(value, roundUpNumber);
   // 小数点以下が存在するかどうかをチェック
   if (value % 1 !== 0) {
     // 切り上げ後も小数点以下があるかチェック

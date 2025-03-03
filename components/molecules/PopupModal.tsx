@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
 import BaseModal from '@/components/atoms/BaseModal';
 import { Button } from '@/components/atoms/Button';
 import { X } from '@phosphor-icons/react/dist/ssr';
+import { ReactNode } from 'react';
 
 type Props = {
   title?: string;
@@ -10,6 +10,7 @@ type Props = {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   type?: 'info' | 'error';
+  zIndex?: '40' | '50' | undefined;
 };
 
 export default function PopupModal({
@@ -19,9 +20,10 @@ export default function PopupModal({
   isOpen,
   setIsOpen,
   type = 'info',
+  zIndex = undefined,
 }: Props) {
   return (
-    <BaseModal isOpen={isOpen}>
+    <BaseModal isOpen={isOpen} zIndex={zIndex}>
       <div
         style={{ width: '900px' }}
         className='h-72 px-24 pb-10 pt-20 relative rounded flex flex-col justify-between'

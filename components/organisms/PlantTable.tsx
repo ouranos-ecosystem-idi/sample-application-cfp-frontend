@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FormikProvider, useFormik } from 'formik';
 import InputTextBox from '@/components/atoms/InputTextBox';
 import { Button } from '@/components/atoms/Button';
@@ -11,6 +11,7 @@ import SectionHeader from '@/components/molecules/SectionHeader';
 import * as Yup from 'yup';
 import '@/lib/yup.locale';
 import { getFormikErrorMessage } from '@/lib/utils';
+
 export type PlantRowType = Plant & {
   tmpRowID: string;
   isNew: boolean;
@@ -96,16 +97,6 @@ export default function PlantDetails({
     enableReinitialize: true,
   });
 
-  // コンポーネントの内部で、依存配列を指定してuseCallbackを使う
-  const handleGlobalPlantIdChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>, index: number) => {
-      const { value } = e.target;
-      const updatedValue = value === '' ? undefined : value;
-      formik.setFieldValue(`data[${index}].globalPlantId`, updatedValue);
-    },
-    [formik]
-  );
-
   const columns: Column<Partial<PlantRowType>>[] = useMemo(
     () => [
       {
@@ -179,7 +170,6 @@ export default function PlantDetails({
             type='text'
             {...formik.getFieldProps(`data[${rowIndex}].globalPlantId`)}
             value={row?.globalPlantId ?? ''}
-            onChange={(e) => handleGlobalPlantIdChange(e, rowIndex)}
             error={getFormikErrorMessage({
               name: `data[${rowIndex}].globalPlantId`,
               formik,
@@ -194,8 +184,8 @@ export default function PlantDetails({
         renderCell: (_, row, rowIndex) =>
           row?.isNew ? ( // 新規に追加された行のみMinusCircleアイコンを表示
             <MinusCircle
-              className='fill-error'
-              size='28'
+              className='fill-error cursor-pointer'
+              size='24'
               onClick={() => {
                 // 該当する行をdata配列から削除
                 const newData = formik.values.data.filter(
@@ -207,7 +197,7 @@ export default function PlantDetails({
           ) : null,
       },
     ],
-    [formik, handleGlobalPlantIdChange]
+    [formik]
   );
 
   return (
@@ -260,6 +250,7 @@ export default function PlantDetails({
           hasBorder={false}
           buttonText='事業所を追加'
           disabled={isPlantLoading || !formik.values.isSet}
+          className='w-full pr-6 flex-row-reverse '
         />
         <PopupModal
           button={

@@ -75,6 +75,7 @@ npm run dev
 ```
 
 http://localhost:3000/ でアプリケーションが起動する。
+Web サーバーを用いてアプリケーションを実行する場合は、後続のビルド手順及びビルド後の実行を実施する。
 
 ## ビルド手順
 
@@ -166,7 +167,7 @@ npx openapi-typescript api/schemas/tr_openapi_b.yaml --output api/schemas/tracea
 
 ## コーディング規約
 
-[SonarQube の 現時点の LTS 版 v9.9.2](https://www.sonarsource.com/products/sonarqube/downloads/lts/9-9-lts/) の Sonar way ルールを適用している。
+[SonarQube の 2024年時点の LTS 版 v9.9.2](https://www.sonarsource.com/products/sonarqube/downloads/lts/9-9-lts/) の Sonar way ルールを適用している。
 
 ## 問合せ及び要望に関して
 

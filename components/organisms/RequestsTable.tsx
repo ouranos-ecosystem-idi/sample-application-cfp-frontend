@@ -1,4 +1,5 @@
 'use client';
+
 import { Button } from '@/components/atoms/Button';
 import DisplayHyphen from '@/components/atoms/DisplayHyphen';
 import Pagination from '@/components/atoms/Pagination';
@@ -142,7 +143,6 @@ function getColumns(
                 <div className='font-semibold mb-2 text-xs text-white'>メッセージ</div>
                 <div className='font-normal text-xs text-white truncate ... max-w-[250px]'>
                   {isEmpty(value) ? <DisplayHyphen className='text-xs' /> : value}
-                  メッセージ
                 </div>
               </>
             }

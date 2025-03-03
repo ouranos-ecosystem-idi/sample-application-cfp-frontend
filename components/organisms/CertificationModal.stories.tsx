@@ -1,6 +1,6 @@
+import { CertificationDataType, Parts } from '@/lib/types';
 import type { Meta, StoryObj } from '@storybook/react';
 import CertificationModal from './CertificationModal';
-import { CertificationDataType, Parts } from '@/lib/types';
 
 const meta = {
   title: 'Components/Organisms/CertificationModal',
@@ -82,6 +82,7 @@ export const Primary: Story = {
     },
     onUploadCert: () => new Promise((resolve) => resolve(true)),
     onDownloadCert: () => new Promise((resolve) => resolve()),
+    onDeleteCert: () => new Promise((resolve) => resolve(true)),
   },
 };
 export const Secondary: Story = {
@@ -95,5 +96,6 @@ export const Secondary: Story = {
     },
     onUploadCert: () => new Promise((resolve) => resolve(true)),
     onDownloadCert: () => new Promise((resolve) => resolve()),
+    onDeleteCert: () => new Promise((resolve) => resolve(true)),
   },
 };

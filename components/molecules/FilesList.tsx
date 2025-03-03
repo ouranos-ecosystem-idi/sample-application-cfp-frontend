@@ -1,8 +1,8 @@
-import { tv } from 'tailwind-variants';
-import { DownloadSimple } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
-import { Trash } from '@phosphor-icons/react/dist/ssr/Trash';
 import Card from '@/components/atoms/Card';
 import FileIcons from '@/components/atoms/FileIcons';
+import { DownloadSimple } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
+import { Trash } from '@phosphor-icons/react/dist/ssr/Trash';
+import { tv } from 'tailwind-variants';
 
 const fileListOuterStyle = tv({
   base: 'divide-y divide-gray',
@@ -39,6 +39,7 @@ function EmptyStateBox({
 export default function FilesList({
   files,
   isEditable = false,
+  isUpload = false,
   onClickDownload: onFileClick = () => { },
   onDelete = () => { },
   placeHolder,
@@ -51,6 +52,7 @@ export default function FilesList({
     size?: string;
   }[];
   isEditable?: boolean;
+  isUpload?: boolean;
   onClickDownload?: (fileId: string) => void;
   onDelete?: (fileId: string) => void;
   placeHolder?: string;
@@ -73,7 +75,7 @@ export default function FilesList({
             <li key={file.fileId} className={fileListStyle()}>
               <FileIcons extension={file.fileName.split('.').pop()} />
               <div
-                className={fileNameStyle({ isLink: !isEditable })}
+                className={fileNameStyle({ isLink: !isEditable || isUpload }) + ' truncate max-w-96'}
                 onClick={isEditable ? () => { } : () => onFileClick(file.fileId)}
               >
                 {file.fileName}
@@ -82,13 +84,23 @@ export default function FilesList({
                 {isEditable ? (
                   <>
                     <div className='mr-[60px]'>{file.size}</div>
+                    <DownloadSimple
+                      size={24}
+                      className='fill-primary cursor-pointer'
+                      onClick={() => onFileClick(file.fileId)}
+                    />
                     <Trash
                       size={24}
-                      className='fill-error cursor-pointer'
+                      className='fill-error cursor-pointer ml-1'
                       onClick={() => onDelete(file.fileId)}
                     />
                   </>
-                ) : (
+                ) : isUpload ? (
+                  <Trash
+                    size={24}
+                    className='fill-error cursor-pointer ml-1'
+                    onClick={() => onDelete(file.fileId)}
+                  />) : (
                   <DownloadSimple
                     size={24}
                     className='fill-primary cursor-pointer'

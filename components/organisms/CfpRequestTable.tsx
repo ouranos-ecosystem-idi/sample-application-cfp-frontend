@@ -80,14 +80,15 @@ export default function CfpRequestTable({
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
 
-  const [isTabs, setIsTabs] = useState<string[]>(['未依頼(ー件)', '依頼済(ー件)']);
-
+  const [isTabs, setIsTabs] = useState<string[]>(['未依頼(-件)', '依頼済(-件)']);
   useEffect(() => {
-    const tabs = isTradeResponseLoading ? ['未依頼(ー件)', '依頼済(ー件)'] : [`未依頼(${notRequestedData.length}件)`, `依頼済(${requestedData.length}件)`];
+    const tabs = isTradeResponseLoading ? ['未依頼(-件)', '依頼済(-件)'] : [`未依頼(${notRequestedData.length}件)`, `依頼済(${requestedData.length}件)`];
     setIsTabs(tabs);
   }, [isTradeResponseLoading, notRequestedData.length, requestedData]);
 
   const [tabIndex, setTabIndex] = useState(0);
+  const [isReplyMessageModalOpen, setIsReplyMessageModalOpen] = useState<boolean>(false);
+  const [ReplyMessage, setReplyMessage] = useState('');
 
   // 取消ボタンが押されたときの処理;
   const handleCancelClick = useCallback((forms: CfpRequestFormType) => {
@@ -148,14 +149,22 @@ export default function CfpRequestTable({
         }),
     },
     validationSchema,
-    onSubmit: (form) => {
-      onSubmit(form);
-      setIsConfirmModalOpen(false);
-    },
+    onSubmit: () => { },
     enableReinitialize: true, // フォームの初期値としてtraceIdを渡す
   });
 
 
+  const isRequestButtonDisabled = useCallback(() => {
+    if (!formik.values.notRequestedCfp.some((_request => _request.selected))) return true;
+
+    const isValid = formik.values.notRequestedCfp.some(
+      (_request, index) => {
+
+        return _request.selected && formik.errors?.notRequestedCfp?.[index] !== undefined;
+
+      });
+    return isValid;
+  }, [formik]);
 
   // notRequestedDataのフォーム編集部分をformikの値に置き替え
   const notRequestedDataWithForm = notRequestedData.map((data, index) => ({
@@ -303,11 +312,6 @@ export default function CfpRequestTable({
                       false,
                       true
                     );
-                    formik.setFieldValue(
-                      `notRequestedCfp[${rowIdx}].selected`,
-                      !isEmpty(e.target.value),
-                      true
-                    );
                   });
               }}
               onBlur={(e) => {
@@ -317,16 +321,24 @@ export default function CfpRequestTable({
                     operator === undefined ? '' : operator.operatorId,
                     true
                   );
+                  if (operator?.operatorName !== formik.values.notRequestedCfp[rowIdx].operatorName) {
+                    formik.setFieldValue(
+                      `notRequestedCfp[${rowIdx}].selected`,
+                      operator !== undefined,
+                      true
+                    );
+                  }
                   formik.setFieldValue(
                     `notRequestedCfp[${rowIdx}].operatorName`,
                     operator === undefined ? '' : operator.operatorName,
-                    false
+                    true
                   );
                   formik.setFieldValue(
                     `notRequestedCfp[${rowIdx}].upstreamOperatorNotFound`,
                     e.target.value !== '' && operator === undefined,
-                    false
+                    true
                   );
+
                 });
                 formik.handleBlur(e);
               }}
@@ -389,7 +401,28 @@ export default function CfpRequestTable({
             })}
           />,
       },
-
+      {
+        id: 'tradeStatus',
+        headerElement: '応答メッセージ',
+        width: 110,
+        justifyHeader: 'center',
+        justify: 'center',
+        renderCell: (value) => {
+          return (
+            <Button
+              key='link-button'
+              className='w-20'
+              disabled={isEmpty(value?.replyMessage)}
+              onClick={() => {
+                setReplyMessage(value!.replyMessage!);
+                setIsReplyMessageModalOpen(true);
+              }}
+            >
+              確認
+            </Button>
+          );
+        }
+      },
     ];
 
   const requestedColumns: Column<TradeRequestDataTypeWithOperator & { selected: boolean; }>[] = [
@@ -413,7 +446,7 @@ export default function CfpRequestTable({
     {
       id: 'operator',
       headerElement: '事業者識別子',
-      width: 180,
+      width: 120,
       renderCell: (value) => {
         if (isOperatorLoading)
           return <SkeletonColumn className='py-1' />;
@@ -450,6 +483,28 @@ export default function CfpRequestTable({
         ? <DisplayHyphen align='left' />
         : <div className='max-h-14 text-xs text-balance overflow-y-auto'>{value?.message}</div>
     },
+    {
+      id: 'tradeStatus',
+      headerElement: '応答メッセージ',
+      width: 110,
+      justifyHeader: 'center',
+      justify: 'center',
+      renderCell: (value) => {
+        return (
+          <Button
+            key='link-button'
+            className='w-20'
+            disabled={isEmpty(value?.replyMessage)}
+            onClick={() => {
+              setReplyMessage(value!.replyMessage!);
+              setIsReplyMessageModalOpen(true);
+            }}
+          >
+            確認
+          </Button>
+        );
+      }
+    },
   ];
 
   useEffect(() => {
@@ -482,7 +537,7 @@ export default function CfpRequestTable({
                   key='confirm'
                   type='button'
                   onClick={() => setIsConfirmModalOpen(true)}
-                  disabled={!(formik.isValid && formik.dirty)}
+                  disabled={isRequestButtonDisabled()}
                 >
                   算出を依頼
                 </Button> :
@@ -536,8 +591,13 @@ export default function CfpRequestTable({
                 variant='solid'
                 size='default'
                 key='submit'
-                type='submit'
-                disabled={!(formik.isValid && formik.dirty)}
+                type='button'
+                onClick={() => {
+                  if (isRequestButtonDisabled()) return;
+                  onSubmit(formik.values);
+                  setIsConfirmModalOpen(false);
+                }}
+                disabled={isRequestButtonDisabled()}
               >
                 算出を依頼
               </Button>
@@ -564,7 +624,17 @@ export default function CfpRequestTable({
             setIsOpen={setIsCancelModalOpen}
             title='CFP算出依頼を取消しますか？'
           />
-
+          <PopupModal
+            isOpen={isReplyMessageModalOpen}
+            setIsOpen={setIsReplyMessageModalOpen}
+          >
+            <p>応答メッセージ </p>
+            <div className='p-2 break-all'>
+              <div className='h-[80px] font-semibold textarea border-neutral rounded text-xs overflow-y-auto'>
+                {ReplyMessage}
+              </div>
+            </div>
+          </PopupModal>
         </form>
       </FormikProvider>
     </>

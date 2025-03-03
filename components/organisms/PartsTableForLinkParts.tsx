@@ -61,12 +61,12 @@ export default function PartsTableForLinkParts({
       {
         id: 'partsName',
         headerElement: '部品項目',
-        width: 84,
+        width: 120,
       },
       {
         id: 'supportPartsName',
         headerElement: '補助項目',
-        width: 84,
+        width: 60,
         renderCell: (value) => (isEmpty(value) ? <DisplayHyphen /> : value),
       },
       {
@@ -78,7 +78,7 @@ export default function PartsTableForLinkParts({
             事業所識別子
           </div>
         ),
-        width: 200,
+        width: 204,
         renderCell: (value) => (
           <PlantCell plantId={value} plants={plants} size='sm' />
         ),
@@ -86,7 +86,7 @@ export default function PartsTableForLinkParts({
       {
         id: 'traceId',
         headerElement: 'トレース識別子',
-        width: 272,
+        width: 276,
         renderCell: (value) => (
           <Link
             href={{
@@ -104,7 +104,7 @@ export default function PartsTableForLinkParts({
         id: 'amountRequiredUnit',
         headerElement: '単位',
         divideAfter: true,
-        width: 84,
+        width: 80,
         renderCell: (value) => {
           return <div className='text-xs'>{value}</div>;
         },
@@ -129,7 +129,7 @@ export default function PartsTableForLinkParts({
               onClick={() => setSelectedRow(undefined)}
             />
           ),
-        width: 30,
+        width: 24,
       },
       ...commonColumns,
       {
@@ -141,7 +141,7 @@ export default function PartsTableForLinkParts({
             排出量(単位)
           </div>
         ),
-        width: 228,
+        width: 216,
         justifyHeader: 'center',
         renderCell: (_, row) => {
           if (isCfpLoading) return <SkeletonColumn className='py-2' />;
@@ -153,7 +153,7 @@ export default function PartsTableForLinkParts({
           else
             return (
               <div className='flex'>
-                <div className='w-[124px] text-xs text-right'>
+                <div className='w-[108px] text-xs text-right'>
                   {sum(
                     row.preProductionTotal?.emission,
                     row.preComponentTotal?.emission
@@ -175,7 +175,7 @@ export default function PartsTableForLinkParts({
             排出量(単位)
           </div>
         ),
-        width: 228,
+        width: 216,
         justifyHeader: 'center',
         renderCell: (_, row) => {
           if (isCfpLoading) return <SkeletonColumn className='py-2' />;
@@ -187,7 +187,7 @@ export default function PartsTableForLinkParts({
           else
             return (
               <div className='flex'>
-                <div className='w-[124px] text-xs text-right'>
+                <div className='w-[108px] text-xs text-right'>
                   {sum(
                     row.mainProductionTotal?.emission,
                     row.mainComponentTotal?.emission
@@ -221,7 +221,7 @@ export default function PartsTableForLinkParts({
               onClick={() => setSelectedRow(rowIdx)}
             />
           ),
-        width: 30,
+        width: 24,
       },
       ...commonColumns,
 
@@ -234,7 +234,7 @@ export default function PartsTableForLinkParts({
             排出量(単位)
           </div>
         ),
-        width: 228,
+        width: 216,
         justifyHeader: 'center',
         renderCell: (_, row) => {
           if (isUnLinkedCfpLoading) return <SkeletonColumn className='py-2' />;
@@ -246,7 +246,7 @@ export default function PartsTableForLinkParts({
           else
             return (
               <div className='flex'>
-                <div className='w-[124px] text-xs text-right'>
+                <div className='w-[108px] text-xs text-right'>
                   {sum(
                     row.preProductionTotal?.emission,
                     row.preComponentTotal?.emission
@@ -268,7 +268,7 @@ export default function PartsTableForLinkParts({
             排出量(単位)
           </div>
         ),
-        width: 228,
+        width: 216,
         justifyHeader: 'center',
         renderCell: (_, row) => {
           if (isUnLinkedCfpLoading) return <SkeletonColumn className='py-2' />;
@@ -280,7 +280,7 @@ export default function PartsTableForLinkParts({
           else
             return (
               <div className='flex'>
-                <div className='w-[124px] text-xs text-right'>
+                <div className='w-[108px] text-xs text-right'>
                   {sum(
                     row.mainProductionTotal?.emission,
                     row.mainComponentTotal?.emission
